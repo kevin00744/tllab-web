@@ -1,0 +1,18 @@
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0b0f14;color:#e6eef7}
+a{color:#7cc2ff;text-decoration:none}a:hover{text-decoration:underline}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#111827;border-bottom:1px solid #1f2937;position:sticky;top:0}
+.brand{font-weight:700;font-size:18px}
+.container{max-width:1100px;margin:24px auto;padding:0 16px}
+.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:16px;margin:16px 0;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.btn{display:inline-block;padding:8px 14px;border-radius:10px;background:#2563eb;color:#fff;border:none;cursor:pointer}
+.btn.gray{background:#374151}
+.btn.danger{background:#dc2626}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+input[type=text],input[type=email],input[type=file],textarea,select{width:100%;padding:10px 12px;background:#0b1220;border:1px solid #27324a;color:#e6eef7;border-radius:10px}
+label{display:block;margin:8px 0 6px 0;font-size:14px;color:#a6b3c5}
+.table{width:100%;border-collapse:collapse;margin-top:8px}
+.table th,.table td{border-bottom:1px solid #1f2937;padding:10px;text-align:left}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.login{max-width:380px;margin:80px auto}
+.flash{padding:10px 12px;border-radius:10px;background:#0f172a;border:1px solid #334155;margin-bottom:10px}
+.footer{font-size:12px;color:#94a3b8;margin:40px 0 20px;text-align:center}
