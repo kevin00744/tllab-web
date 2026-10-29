@@ -1,0 +1,23 @@
+# TL Lab Hub 網頁服務
+# 設定值放在專案根目錄的 .env（範本：.env.example）
+#   docker compose up -d --build
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    image: tllab-hub-web:latest
+    container_name: tllab-hub-web
+    restart: unless-stopped
+    environment:
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    # 只綁定本機，對外經由 Nginx（Docker 發布的連接埠會繞過 ufw）
+    ports:
+      - "127.0.0.1:3000:3000"
+    # 讓容器能以 host.docker.internal 連到主機上的自架 Supabase
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

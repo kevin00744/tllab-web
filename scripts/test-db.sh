@@ -17,12 +17,10 @@ trap cleanup EXIT
 PSQL=(psql -h "$WORK" -p "$PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q -X)
 "${PSQL[@]}" -c "alter database postgres set search_path = public, extensions"
 "${PSQL[@]}" -f "$ROOT/supabase/tests/supabase_stub.sql"
-for f in "$ROOT"/supabase/migrations/*.sql; do
-  echo "→ migration $(basename "$f")"
-  "${PSQL[@]}" -f "$f"
-done
-echo "→ seed.sql"
-"${PSQL[@]}" -f "$ROOT/supabase/seed.sql"
+export PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d postgres"
+"$ROOT/scripts/db-apply.sh" --seed
+echo "→ 再次執行 db-apply（應全部略過）"
+"$ROOT/scripts/db-apply.sh"
 echo "→ tests"
 "${PSQL[@]}" -f "$ROOT/supabase/tests/rls_test.sql"
 echo "✓ 全部通過"
