@@ -20,6 +20,9 @@ const VALIDATION: ActionError[] = [
 
 /** 資料庫函式的錯誤碼 → 介面訊息 key（見 migration 08 開頭說明） */
 export function toActionError(error: PostgrestError): ActionError {
+  if (error.message === "adminProtected") return "adminProtected";
+  // members_protect_admin trigger（migration 11）
+  if (error.message.includes("至少需要保留一位系統管理員")) return "lastSystemAdmin";
   if (error.code === "42501") return "noPermission";
   if (error.code === "P0002") return "notFound";
   if (error.code === "40001") return "conflict";

@@ -32,7 +32,7 @@ const zhTW = {
     language: "語言",
     signOut: "登出",
   },
-  roles: { admin: "管理者", member: "成員", viewer: "唯讀" },
+  roles: { admin: "管理者", member: "成員", viewer: "唯讀", systemAdmin: "系統管理員" },
   positions: {
     pi: "PI",
     postdoc: "Postdoc",
@@ -175,6 +175,8 @@ const zhTW = {
   },
   errors: {
     lastAdmin: "系統至少需要保留一位 Admin",
+    lastSystemAdmin: "系統至少需要保留一位系統管理員",
+    adminProtected: "管理員的身分只有系統管理員可以變更",
     nameRequired: "請輸入姓名",
     emailInvalid: "Email 格式不正確",
     emailTaken: "這個 Email 已屬於其他成員",
@@ -269,8 +271,8 @@ const zhTW = {
   projectDoc: {
     title: "專案頁面",
     empty: "這個專案頁面還沒有內容。",
-    emptyEditable: "點這裡開始撰寫（支援 Markdown：# 標題、- 清單、[ ] 待辦、``` 程式碼）",
-    clickToEdit: "點擊內容即可編輯",
+    emptyEditable: "點這裡開始撰寫（支援 Markdown：# 標題、- 清單、[ ] 待辦、``` 程式碼；也可以直接貼上 Markdown）",
+    clickToEdit: "點擊內容即可編輯，點其他地方會自動儲存並回到預覽",
     placeholder: "輸入內容…　# 標題　- 清單　[ ] 待辦　``` 程式碼　> 引用",
     done: "完成",
     saving: "儲存中…",
@@ -358,6 +360,7 @@ const zhTW = {
     photoHint: "JPG／PNG／WebP，會自動裁成正方形並縮小",
     photoTooLarge: "照片超過 5 MB",
     adminSection: "管理（僅 Admin）",
+    adminLocked: "這位是管理員：權限、職稱、Email、校友狀態、密碼與刪除只有系統管理員可以變更。",
     account: "登入帳號",
     accountLinked: "已綁定",
     accountNone: "尚未註冊",

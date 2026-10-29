@@ -376,4 +376,7 @@ insert into public.activity_log (actor_id, action, entity_type, entity_id, entit
   ('10000000-0000-0000-0000-000000000012', 'insert', 'faq', '70000000-0000-0000-0000-000000000004', '耗材要怎麼請購？',
    null, now() - interval '5 days');
 
+-- PI 為系統管理員（migration 11）
+update public.members set is_system_admin = true where id = '10000000-0000-0000-0000-000000000001';
+
 commit;

@@ -38,9 +38,10 @@ export function MemberAdmin({ member }: { member: MemberProfile }) {
           {member.has_account ? t.membersPage.accountLinked : t.membersPage.accountNone}
         </Badge>
       </div>
+      {member.manageable ? null : <p className="mb-2 text-xs text-status-amber-fg">{t.membersPage.adminLocked}</p>}
       <div className="flex flex-wrap gap-2">
-        {member.has_account ? <ResetPassword member={member} /> : <BoundInvite member={member} />}
-        {member.is_me ? null : (
+        {member.has_account ? member.manageable ? <ResetPassword member={member} /> : null : <BoundInvite member={member} />}
+        {member.is_me || !member.manageable ? null : (
           <ConfirmDelete
             name={member.name}
             trigger={

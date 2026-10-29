@@ -17,6 +17,7 @@ export type Member = {
   position: MemberPosition;
   app_role: AppRole;
   is_alumni: boolean;
+  is_system_admin: boolean;
 };
 
 export type PageSetting = {

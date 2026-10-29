@@ -6,7 +6,7 @@ import { MemberAvatar } from "@/components/layout/user-menu";
 import { Badge } from "@/components/ui/badge";
 import type { Dictionary } from "@/lib/i18n";
 import { format } from "@/lib/i18n";
-import { roleTone } from "@/lib/status";
+import { roleLabel, roleTone } from "@/lib/status";
 import type { MemberProfile } from "@/types/entities";
 
 type Props = { members: MemberProfile[]; t: Dictionary; isAdmin: boolean };
@@ -39,7 +39,7 @@ export function MemberCards({ members, t, isAdmin }: Props) {
               </div>
               <div className="mt-1 flex flex-wrap gap-1">
                 <PositionBadge m={m} t={t} />
-                {isAdmin && m.app_role !== "member" ? <Badge tone={roleTone[m.app_role]}>{t.roles[m.app_role]}</Badge> : null}
+                {isAdmin && m.app_role !== "member" ? <Badge tone={roleTone[m.app_role]}>{roleLabel(t, m)}</Badge> : null}
               </div>
               {m.research_interests.length ? (
                 <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{m.research_interests.join("・")}</p>
@@ -119,7 +119,7 @@ export function MembersTable({ members, t, isAdmin }: Props) {
               </td>
               {isAdmin ? (
                 <td className="px-4 py-2">
-                  <Badge tone={roleTone[m.app_role]}>{t.roles[m.app_role]}</Badge>
+                  <Badge tone={roleTone[m.app_role]}>{roleLabel(t, m)}</Badge>
                   {!m.has_account ? <span className="ml-1.5 text-[11px] text-muted-foreground">{t.membersPage.accountNone}</span> : null}
                 </td>
               ) : null}

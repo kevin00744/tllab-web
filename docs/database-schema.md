@@ -14,6 +14,7 @@
 | `20261029000008_projects_tasks_publications_api.sql` | 專案／任務／論文的讀寫函式（網頁一律經由這些函式存取，權限仍由 RLS 決定） |
 | `20261029000009_project_files.sql` | 專案頁面本文（Markdown，含版本號偵測同時編輯）、進度報告簡報附件、活動紀錄合併與截短 |
 | `20261029000010_members_api.sql` | 成員列表／個人頁／編輯／刪除 API、邀請碼列表與撤銷（階段 5） |
+| `20261029000011_system_admin.sql` | 系統管理員 `members.is_system_admin`（預設給 PI）：管理員的身分只有系統管理員能變更 |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -145,11 +146,12 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | 編輯 Orientation Guide / FAQ / 軟體工具 | ✅ | ✅（協作 wiki） | ❌ | ❌ |
 | 編輯 Pipeline | ✅ | 建立者、維護者 | ❌ | ❌ |
 | 刪除 | ✅ | 自己建立的（專案另含負責人） | ❌ | ❌ |
-| 編輯成員資料 | ✅ | 只能改自己的個人資料，不能改權限／Email／校友狀態 | ❌ | ❌ |
+| 編輯成員資料 | ✅（管理員的權限／職稱／Email／校友狀態只有系統管理員能改） | 只能改自己的個人資料，不能改權限／Email／校友狀態 | ❌ | ❌ |
+| 刪除管理員、重設管理員密碼 | 僅系統管理員 | ❌ | ❌ | ❌ |
 | 修改頁面 emoji 設定 | ✅ | ❌ | ❌ | ❌ |
 | 產生／查看／撤銷邀請碼 | ✅ | ❌ | ❌ | ❌ |
 
-另有保護：系統至少保留一位 Admin；活動紀錄只能由 trigger 寫入，使用者無法竄改。
+另有保護：系統至少保留一位 Admin 與一位系統管理員（`members_protect_admin` trigger；不再是 Admin 或成為校友時自動取消系統管理員；指定系統管理員只能在 SQL Editor 進行）；活動紀錄只能由 trigger 寫入，使用者無法竄改。
 
 ## 函式與檢視
 
@@ -176,7 +178,8 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `list_members(filter)` / `get_member(id)` | 成員列表（篩選 `position`、`alumni`、`q` 比對姓名／Email／研究方向；含參與專案、是否已註冊、`editable`）；個人頁另含論文與未完成任務 |
 | `save_member(p)` | 新增（僅 Admin）或更新成員；本人只能改個人資料，職稱／權限／Email／校友／排序由 Admin 修改（一般成員送來的值會被忽略）；連結只保留 `http(s)://` 網址 |
 | `delete_member(id)` | 刪除成員（僅 Admin、不能刪自己），回傳原本的登入帳號 id，讓伺服器一併刪除帳號 |
-| `member_user_id(id)` | 成員的登入帳號 id（Admin 重設密碼用） |
+| `member_user_id(id)` | 成員的登入帳號 id（Admin 重設密碼用；其他管理員的只有系統管理員能取得） |
+| `is_system_admin()` | 目前使用者是否為系統管理員；`member_json` 另回傳 `is_system_admin` 與 `manageable`（能否變更此成員的身分） |
 | `list_invite_codes()` / `revoke_invite_code(id)` | 邀請碼列表（狀態 active／used／expired／revoked、已使用者 Email）與撤銷（僅 Admin） |
 | `create_invite_code(...)` | 產生邀請碼（Admin），回傳原文一次 |
 | `claim_invite_code` / `release_invite_code` / `complete_invite_signup` | 邀請碼註冊流程（僅 service_role） |

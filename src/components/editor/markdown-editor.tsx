@@ -26,11 +26,16 @@ import {
   StrikethroughIcon,
   TableIcon,
 } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+
+// 貼上的純文字像 Markdown（標題、清單、引用、程式碼、表格、待辦、粗體、連結）時，轉成對應格式
+const MARKDOWN_HINT = /^(#{1,6}\s|\s*[-*+]\s|\s*\d+\.\s|>\s?|```|\|.+\||---\s*$)|\*\*[^*\n]+\*\*|\[[^\]\n]+\]\([^)\s]+\)/m;
+// 來源若是網頁或文件（HTML 已有段落／標題等結構），維持一般貼上
+const RICH_HTML = /<(h[1-6]|p|ul|ol|li|table|blockquote|pre)[\s>]/i;
 
 /**
  * 類 Notion 的 Markdown 編輯器：所見即所得，支援 Markdown 快捷輸入
@@ -47,6 +52,7 @@ export function MarkdownEditor({
   onChange: (markdown: string) => void;
   onEscape: () => void;
 }) {
+  const editorRef = useRef<Editor | null>(null);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -65,6 +71,14 @@ export function MarkdownEditor({
     autofocus: "end",
     editorProps: {
       attributes: { class: "md", "data-testid": "markdown-editor" },
+      handlePaste: (_view, event) => {
+        const text = event.clipboardData?.getData("text/plain") ?? "";
+        const html = event.clipboardData?.getData("text/html") ?? "";
+        const e = editorRef.current;
+        if (!e || !MARKDOWN_HINT.test(text) || RICH_HTML.test(html) || e.isActive("codeBlock")) return false;
+        e.chain().focus().insertContent(text, { contentType: "markdown" }).run();
+        return true;
+      },
       handleKeyDown: (_view, event) => {
         if (event.key === "Escape") {
           onEscape();
@@ -75,6 +89,10 @@ export function MarkdownEditor({
     },
     onUpdate: ({ editor: e }) => onChange(e.getMarkdown()),
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   if (!editor) return <div className="min-h-24" />;
   return (
@@ -218,7 +236,7 @@ function SelectionMenu({ editor }: { editor: Editor }) {
   }
 
   return (
-    <BubbleMenu editor={editor} className="flex gap-0.5 rounded-lg border bg-popover p-1 shadow-md">
+    <BubbleMenu editor={editor} data-editor-popup className="flex gap-0.5 rounded-lg border bg-popover p-1 shadow-md">
       <ToolButton label={m.bold} active={state.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
         <BoldIcon />
       </ToolButton>

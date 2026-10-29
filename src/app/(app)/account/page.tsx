@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentMember } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
-import { roleTone } from "@/lib/status";
+import { roleLabel, roleTone } from "@/lib/status";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -39,7 +39,7 @@ export default async function AccountPage() {
               <div className="truncate text-sm text-muted-foreground">{member.email}</div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 <Badge tone={roleTone[member.app_role]}>
-                  {t.account.role}：{t.roles[member.app_role]}
+                  {t.account.role}：{roleLabel(t, member)}
                 </Badge>
                 <Badge tone="outline">
                   {t.account.position}：{t.positions[member.position]}

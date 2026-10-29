@@ -129,6 +129,8 @@ function MemberForm({ member, isAdmin, onDone }: { member: MemberProfile | null;
   }
 
   const preview = { name: form.name || "?", avatar_url: form.avatar_url || null };
+  // 管理員的身分只有系統管理員能變更（資料庫 trigger 另外把關）
+  const locked = !!member && !member.manageable;
 
   return (
     <DialogContent className="sm:max-w-xl" closeLabel={t.common.close}>
@@ -228,8 +230,9 @@ function MemberForm({ member, isAdmin, onDone }: { member: MemberProfile | null;
             </div>
 
             {isAdmin ? (
-              <div className="grid gap-4 rounded-lg border border-dashed p-3">
+              <fieldset disabled={locked} className="grid gap-4 rounded-lg border border-dashed p-3" data-testid="admin-fields">
                 <span className="text-xs font-medium text-muted-foreground">{t.membersPage.adminSection}</span>
+                {locked ? <p className="text-xs text-status-amber-fg">{t.membersPage.adminLocked}</p> : null}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={t.auth.email} htmlFor="m-email">
                     <Input id="m-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
@@ -260,7 +263,7 @@ function MemberForm({ member, isAdmin, onDone }: { member: MemberProfile | null;
                   <Checkbox checked={form.is_alumni} onChange={(e) => set("is_alumni", e.target.checked)} />
                   {t.membersPage.alumni}
                 </label>
-              </div>
+              </fieldset>
             ) : null}
           </fieldset>
         </DialogBody>

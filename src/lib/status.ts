@@ -31,6 +31,11 @@ export const publicationStageTone: Record<PublicationStage, Tone> = {
 
 export const roleTone: Record<AppRole, Tone> = { admin: "purple", member: "blue", viewer: "gray" };
 
+/** 權限名稱；系統管理員另外標示 */
+export function roleLabel(t: Dictionary, m: { app_role: AppRole; is_system_admin?: boolean }) {
+  return m.is_system_admin ? t.roles.systemAdmin : t.roles[m.app_role];
+}
+
 export function statusLabel(t: Dictionary, kind: keyof Dictionary["status"], value: string) {
   return (t.status[kind] as Record<string, string>)[value] ?? value;
 }

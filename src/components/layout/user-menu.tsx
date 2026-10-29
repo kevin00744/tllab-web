@@ -5,7 +5,7 @@ import { ChevronsUpDownIcon, LogOutIcon, UserCogIcon } from "lucide-react";
 
 import { signOut } from "@/app/(auth)/actions";
 import { useI18n } from "@/lib/i18n/client";
-import { roleTone } from "@/lib/status";
+import { roleLabel, roleTone } from "@/lib/status";
 import type { Member } from "@/types/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ export function UserMenu({ member }: { member: Member }) {
         <MemberAvatar member={member} className="size-7" />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{member.name}</span>
-          <span className="block truncate text-xs text-muted-foreground">{t.roles[member.app_role]}</span>
+          <span className="block truncate text-xs text-muted-foreground">{roleLabel(t, member)}</span>
         </span>
         <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
@@ -45,7 +45,7 @@ export function UserMenu({ member }: { member: Member }) {
           <div className="truncate font-medium">{member.name}</div>
           <div className="truncate text-xs text-muted-foreground">{member.email}</div>
           <Badge tone={roleTone[member.app_role]} className="mt-1.5">
-            {t.roles[member.app_role]}
+            {roleLabel(t, member)}
           </Badge>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

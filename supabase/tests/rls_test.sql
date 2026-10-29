@@ -678,3 +678,85 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- ---------------------------------------------------------------------------
+-- 系統管理員（migration 11）：管理員的身分只有系統管理員能變更
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email) values ('aaaaaaaa-0000-0000-0000-000000000002', 'yichun.chen@tllab.example');
+-- 「至少保留一位 Admin」測試曾把陳怡君降為 member，先恢復
+update members set app_role = 'admin' where id = '10000000-0000-0000-0000-000000000002';
+do $$
+begin
+  assert (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000001'), 'PI 為系統管理員';
+  assert not (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000002');
+end $$;
+
+-- 一般 Admin（陳怡君）
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+do $$
+declare
+  pi jsonb := get_member('10000000-0000-0000-0000-000000000001');
+  me jsonb := get_member('10000000-0000-0000-0000-000000000002');
+begin
+  assert is_admin() and not is_system_admin();
+  assert not (pi ->> 'manageable')::boolean, '一般 Admin 不能管理系統管理員';
+  assert not (me ->> 'manageable')::boolean, '一般 Admin 不能變更自己的身分';
+  assert (get_member('10000000-0000-0000-0000-000000000005') ->> 'manageable')::boolean, '可以管理一般成員';
+  -- 不能降級、設為校友、改 Email／職稱
+  begin perform save_member(pi || '{"app_role":"member"}'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected', sqlerrm; end;
+  begin perform save_member(pi || '{"is_alumni":true}'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected'; end;
+  begin perform save_member(me || '{"position":"phd"}'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected'; end;
+  begin update members set is_system_admin = true where id = '10000000-0000-0000-0000-000000000002'; raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected'; end;
+  -- 個人資料（簡介）仍可編輯
+  perform save_member(pi || '{"bio":"由一般 Admin 更新"}');
+  assert (select bio from members where id = '10000000-0000-0000-0000-000000000001') = '由一般 Admin 更新';
+  -- 可以把一般成員升為 Admin，但之後就不能再降級或刪除
+  perform save_member(get_member('10000000-0000-0000-0000-000000000003') || '{"app_role":"admin"}');
+  assert (select app_role from members where id = '10000000-0000-0000-0000-000000000003') = 'admin';
+  begin perform save_member(get_member('10000000-0000-0000-0000-000000000003') || '{"app_role":"member"}'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected'; end;
+  begin perform delete_member('10000000-0000-0000-0000-000000000003'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected'; end;
+  -- 不能重設其他管理員的密碼；自己的可以
+  begin perform member_user_id('10000000-0000-0000-0000-000000000001'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'adminProtected'; end;
+  assert member_user_id('10000000-0000-0000-0000-000000000002') = 'aaaaaaaa-0000-0000-0000-000000000002';
+  assert member_user_id('10000000-0000-0000-0000-000000000005') = 'aaaaaaaa-0000-0000-0000-000000000005';
+end $$;
+
+-- 系統管理員（PI）
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+do $$
+begin
+  assert is_system_admin();
+  assert (get_member('10000000-0000-0000-0000-000000000002') ->> 'manageable')::boolean;
+  assert member_user_id('10000000-0000-0000-0000-000000000002') = 'aaaaaaaa-0000-0000-0000-000000000002';
+  -- 可以把管理員降級、設為校友
+  perform save_member(get_member('10000000-0000-0000-0000-000000000003') || '{"app_role":"member"}');
+  assert (select app_role from members where id = '10000000-0000-0000-0000-000000000003') = 'member';
+  perform save_member(get_member('10000000-0000-0000-0000-000000000002') || '{"is_alumni":true,"left_year":"2026"}');
+  assert (select is_alumni from members where id = '10000000-0000-0000-0000-000000000002');
+  perform save_member(get_member('10000000-0000-0000-0000-000000000002') || '{"is_alumni":false,"left_year":""}');
+  -- 不能移除最後一位系統管理員
+  begin perform save_member(get_member('10000000-0000-0000-0000-000000000001') || '{"app_role":"member"}'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm like '%系統管理員%', sqlerrm; end;
+  assert (select app_role = 'admin' and is_system_admin from members where id = '10000000-0000-0000-0000-000000000001');
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- SQL Editor：移交系統管理員；不再是 Admin 時自動取消
+do $$
+begin
+  update members set is_system_admin = true where id = '10000000-0000-0000-0000-000000000002';
+  update members set app_role = 'member' where id = '10000000-0000-0000-0000-000000000002';
+  assert not (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000002'), '降級時自動取消系統管理員';
+  update members set app_role = 'admin' where id = '10000000-0000-0000-0000-000000000002';
+  begin update members set is_system_admin = false where id = '10000000-0000-0000-0000-000000000001'; raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;

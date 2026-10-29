@@ -38,9 +38,10 @@ export function ProjectDoc({
   const [text, setText] = useState(content);
   const [status, setStatus] = useState<Status>("idle");
 
-  // 伺服器資料更新（例如他人修改後重新整理）且目前沒在編輯時，採用新內容
+  // 伺服器資料較新（例如他人修改後重新整理）且目前沒在編輯時，採用新內容。
+  // 只比較版本號：剛存完、重新整理還沒回來時，舊的 props 不會蓋掉剛存的內容
   const [source, setSource] = useState({ content, version });
-  if (!editing && (source.content !== content || source.version !== version)) {
+  if (!editing && version > source.version) {
     setSource({ content, version });
     setText(content);
   }
@@ -103,12 +104,47 @@ export function ProjectDoc({
     setEditing(true);
   }
 
+  const finishing = useRef(false);
   async function finish() {
-    await flush();
-    if (statusRef.current === "conflict") return;
-    setEditing(false);
-    router.refresh();
+    if (finishing.current) return;
+    finishing.current = true;
+    try {
+      await flush();
+      // 前一次儲存還在進行時，等它完成再回到預覽
+      while (saving.current) await new Promise((r) => setTimeout(r, 50));
+      if (statusRef.current === "conflict") return;
+      setEditing(false);
+      router.refresh();
+    } finally {
+      finishing.current = false;
+    }
   }
+
+  // 編輯中點擊編輯區以外（或用 Tab 離開）時，自動儲存並回到預覽
+  const areaRef = useRef<HTMLDivElement>(null);
+  const finishRef = useRef(finish);
+  useEffect(() => {
+    finishRef.current = finish;
+  });
+  useEffect(() => {
+    if (!editing) return;
+    const inside = (target: EventTarget | null) =>
+      target instanceof Node &&
+      (!!areaRef.current?.contains(target) || (target instanceof Element && !!target.closest("[data-editor-popup]")));
+    const onPointerDown = (e: PointerEvent) => {
+      if (!inside(e.target)) void finishRef.current();
+    };
+    const onFocusOut = (e: FocusEvent) => {
+      if (e.relatedTarget && !inside(e.relatedTarget)) void finishRef.current();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    const area = areaRef.current;
+    area?.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      area?.removeEventListener("focusout", onFocusOut);
+    };
+  }, [editing]);
 
   // 離開頁面前若尚未儲存，提醒使用者
   useEffect(() => {
@@ -172,7 +208,7 @@ export function ProjectDoc({
   }
 
   return (
-    <div data-testid="project-doc-editing">
+    <div ref={areaRef} data-testid="project-doc-editing">
       {status === "conflict" ? (
         <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 rounded-md bg-status-amber-bg px-3 py-2 text-sm text-status-amber-fg">
           <TriangleAlertIcon className="size-4" />

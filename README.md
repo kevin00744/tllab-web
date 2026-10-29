@@ -16,13 +16,14 @@ TL Lab（Lab 911）內部使用的網頁系統，取代原本 Notion 上的實�
 | 2 | 版面架構（側邊欄 + 路由）與登入 | ✅ |
 | 3 | Dashboard 首頁 | ✅ |
 | 4 | Projects、Tasks、Publication Tracker | ✅ |
-| 5 | Team Members（含邀請碼管理、重設密碼） | ✅ 待確認 |
+| 5 | Team Members（含邀請碼管理、重設密碼、系統管理員） | ✅ 待確認 |
 | 6 | Resources 各子頁面 | ⏳ |
 | 7 | 全站搜尋、權限、活動紀錄、深色模式 | ⏳ |
 | 8 | 從 Notion 匯入資料（CSV／Markdown） | ⏳ |
 | 9 | 共同編輯行事曆、個人化 Dashboard（依個人資料決定顯示哪些區塊） | ⏳ |
+| 10 | 公開瀏覽：登入改為選項，未登入可看成員等公開頁面（最後階段） | ⏳ |
 
-> 目前完成到階段 5：登入／邀請碼註冊、側邊欄、中英文、深淺色、Dashboard，以及專案（表格／看板／甘特圖／詳細頁）、任務（可拖拉看板／清單／月曆，篩選我的／逾期／專案／成員）、論文追蹤（看板／表格／年度統計圖，作者可連結成員）。專案頁面另有類 Notion 的 Markdown 本文（點擊即編輯、自動儲存）與進度報告簡報上傳（PPT/PPTX 自動轉 PDF，網頁內逐頁預覽）。成員頁有卡片／表格檢視、職稱篩選、校友分區與個人頁（照片、研究方向、Markdown 簡介、連結、參與專案、論文、進行中任務）；Admin 可在網頁上新增／刪除成員、調整權限、管理邀請碼、重設密碼。
+> 目前完成到階段 5：登入／邀請碼註冊、側邊欄、中英文、深淺色、Dashboard，以及專案（表格／看板／甘特圖／詳細頁）、任務（可拖拉看板／清單／月曆，篩選我的／逾期／專案／成員）、論文追蹤（看板／表格／年度統計圖，作者可連結成員）。專案頁面另有類 Notion 的 Markdown 本文（點擊即編輯、自動儲存）與進度報告簡報上傳（PPT/PPTX 自動轉 PDF，網頁內逐頁預覽）。成員頁有卡片／表格檢視、職稱篩選、校友分區與個人頁（照片、研究方向、Markdown 簡介、連結、參與專案、論文、進行中任務）；Admin 可在網頁上新增／刪除成員、調整權限、管理邀請碼、重設密碼；管理員的身分只有系統管理員（PI）可以變更。專案頁面可直接貼上 Markdown（`# 標題` 等會轉成格式），點其他地方即自動儲存並回到預覽。
 
 ## 專案結構
 
@@ -270,6 +271,24 @@ select name, email, app_role, user_id is not null as 已綁定 from public.membe
 
 ```sql
 update public.members set app_role = 'admin' where lower(email) = lower('<你的信箱>');
+```
+
+**系統管理員**：管理員（Admin）的身分（權限、職稱、Email、校友狀態）、密碼重設與刪除，只有系統管理員可以操作；一般 Admin 不能更動其他管理員，也不能更動自己的身分。套用 migration 11 時，資料庫裡職稱為 PI 的 Admin 會自動成為系統管理員。確認目前的系統管理員：
+
+```sql
+select name, email from public.members where is_system_admin;
+```
+
+PI 之後才加入、或要指定其他人時，在 SQL Editor 執行（對方必須是 Admin、非校友）：
+
+```sql
+update public.members set app_role = 'admin', is_system_admin = true where lower(email) = lower('<PI 的信箱>');
+```
+
+移交時先設定新的系統管理員，再取消舊的（系統至少需要保留一位系統管理員）：
+
+```sql
+update public.members set is_system_admin = false where lower(email) = lower('<舊的信箱>');
 ```
 
 ### 6-4 產生邀請碼

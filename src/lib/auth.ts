@@ -13,7 +13,7 @@ export const getCurrentMember = cache(async (): Promise<Member | null> => {
 
   const { data } = await supabase
     .from("members")
-    .select("id, user_id, name, name_en, email, avatar_url, position, app_role, is_alumni")
+    .select("id, user_id, name, name_en, email, avatar_url, position, app_role, is_alumni, is_system_admin")
     .eq("user_id", userId)
     .maybeSingle();
   return (data as Member | null) ?? null;

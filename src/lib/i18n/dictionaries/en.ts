@@ -34,7 +34,7 @@ const en: Dictionary = {
     language: "Language",
     signOut: "Sign out",
   },
-  roles: { admin: "Admin", member: "Member", viewer: "Viewer" },
+  roles: { admin: "Admin", member: "Member", viewer: "Viewer", systemAdmin: "System admin" },
   positions: {
     pi: "PI",
     postdoc: "Postdoc",
@@ -176,6 +176,8 @@ const en: Dictionary = {
     clear: "Clear",
   },
   errors: {
+    lastSystemAdmin: "At least one system admin is required",
+    adminProtected: "Only the system admin can change an admin’s role or status",
     lastAdmin: "At least one admin is required",
     nameRequired: "Enter a name",
     emailInvalid: "Invalid email",
@@ -271,8 +273,8 @@ const en: Dictionary = {
   projectDoc: {
     title: "Project page",
     empty: "This project page has no content yet.",
-    emptyEditable: "Click here to start writing (Markdown: # heading, - list, [ ] to-do, ``` code)",
-    clickToEdit: "Click the content to edit",
+    emptyEditable: "Click here to start writing (Markdown: # heading, - list, [ ] to-do, ``` code; you can also paste Markdown)",
+    clickToEdit: "Click the content to edit; click elsewhere to save and return to preview",
     placeholder: "Type…　# heading　- list　[ ] to-do　``` code　> quote",
     done: "Done",
     saving: "Saving…",
@@ -360,6 +362,7 @@ const en: Dictionary = {
     photoHint: "JPG / PNG / WebP, cropped to a square and resized automatically",
     photoTooLarge: "Photo is larger than 5 MB",
     adminSection: "Admin only",
+    adminLocked: "This member is an admin. Only the system admin can change their role, position, email, alumni status or password, or delete them.",
     account: "Login account",
     accountLinked: "Linked",
     accountNone: "Not registered",

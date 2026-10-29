@@ -128,6 +128,7 @@ export type MemberProfile = {
   position: MemberPosition;
   app_role: AppRole;
   is_alumni: boolean;
+  is_system_admin: boolean;
   research_interests: string[];
   bio: string | null;
   join_year: number | null;
@@ -138,6 +139,8 @@ export type MemberProfile = {
   has_account: boolean;
   projects: (Ref & { emoji: string; status: ProjectStatus; is_owner: boolean })[];
   editable: boolean;
+  /** 目前使用者能否變更此成員的權限、職稱等（管理員只有系統管理員能變更） */
+  manageable: boolean;
   is_me: boolean;
 };
 
