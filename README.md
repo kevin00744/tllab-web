@@ -12,8 +12,8 @@ TL Lab（Lab 911）內部使用的網頁系統，取代原本 Notion 上的實�
 
 | 階段 | 內容 | 狀態 |
 |---|---|---|
-| 1 | 資料庫 schema 與資料表關聯 | ✅ 待確認 |
-| 2 | 版面架構（側邊欄 + 路由）與登入 | ⏳ |
+| 1 | 資料庫 schema 與資料表關聯 | ✅ |
+| 2 | 版面架構（側邊欄 + 路由）與登入 | ✅ 待確認 |
 | 3 | Dashboard 首頁 | ⏳ |
 | 4 | Projects、Tasks、Publication Tracker | ⏳ |
 | 5 | Team Members | ⏳ |
@@ -21,22 +21,51 @@ TL Lab（Lab 911）內部使用的網頁系統，取代原本 Notion 上的實�
 | 7 | 全站搜尋、權限、活動紀錄、深色模式 | ⏳ |
 | 8 | 從 Notion 匯入資料（CSV／Markdown） | ⏳ |
 
-> 目前只完成階段 1（資料庫）。下方的資料庫部署現在就能用；「部署網頁」一節要等階段 2 建立前端後才能執行。
+> 目前完成到階段 2：登入／邀請碼註冊、帳號設定、側邊欄與各頁路由、中英文切換、深淺色模式。各模組頁面內容依階段陸續完成。
 
 ## 專案結構
 
 ```
+src/app/(auth)/        登入、邀請碼註冊（未登入可進入）
+src/app/(app)/         登入後的頁面：Dashboard 與各模組
+src/app/api/health/    健康檢查（Docker healthcheck 用）
+src/components/        版面（側邊欄、頁首）、表單、shadcn/ui 元件
+src/lib/supabase/      Supabase 連線（瀏覽器、伺服器、service_role、proxy）
+src/lib/i18n/          繁中／英文字典與語言切換
+src/lib/status.ts      全站一致的狀態標籤色
+src/proxy.ts           未登入導向登入頁、更新 session
 supabase/migrations/   資料庫 schema（依序套用）
 supabase/seed.sql      示範資料
 supabase/tests/        schema／權限測試
-scripts/db-apply.sh    套用 migrations（可重複執行，已套用的會跳過）
-scripts/db-backup.sh   匯出資料備份
-scripts/db-restore.sh  把備份還原到新的 Supabase 專案
-scripts/test-db.sh     在暫存 PostgreSQL 上跑完整測試
+scripts/               db-apply／db-backup／db-restore／test-db
 deploy/nginx/          Nginx 反向代理設定
-Dockerfile             網頁的容器映像（Node.js 20）
+Dockerfile             網頁的容器映像（Node.js 22）
 docker-compose.yml     網頁服務
 docs/                  資料庫 schema、ER 圖、權限說明
+```
+
+## 本機開發（開發者電腦，不是 18.04 主機）
+
+需要 Node.js 20.9 以上。先安裝套件並建立設定檔：
+
+```bash
+npm install
+```
+
+```bash
+cp .env.example .env.local
+```
+
+在 `.env.local` 填入 Supabase 的網址與金鑰（同步驟 7），然後啟動開發伺服器，開 <http://localhost:3000>：
+
+```bash
+npm run dev
+```
+
+送出程式碼前執行檢查：
+
+```bash
+npm run lint && npm run typecheck && npm run build
 ```
 
 Schema、ER 圖與權限說明見 [docs/database-schema.md](docs/database-schema.md)。
@@ -308,30 +337,36 @@ update auth.users set encrypted_password = extensions.crypt('<臨時密碼>', ex
 
 日後如果設定了 SMTP，也可以開放成員自行用 Email 重設密碼。
 
-## 步驟 7：部署網頁（階段 2 完成後適用）
+## 步驟 7：部署網頁
 
-到 Supabase Dashboard → **Project Settings → API**（新版介面為 **API Keys**）取得：
-- Project URL
-- `anon`（public）key
-- `service_role` key
+先更新程式碼：
+
+```bash
+cd /opt/tllab/tllab-web && git pull
+```
+
+到 Supabase Dashboard 取得三個值：
+- **Project URL**：Project Settings → **Data API**（或 **API**），例如 `https://wdnkgbmumfqsfhhqlqmk.supabase.co`
+- 兩把金鑰：Project Settings → **API Keys**，下列兩組擇一使用：
+  - **Legacy API Keys** 分頁的 `anon` 和 `service_role`
+  - 新版的 Publishable key（`sb_publishable_...`）和 Secret key（`sb_secret_...`）
 
 建立設定檔：
 
 ```bash
-cd /opt/tllab/tllab-web
-cp .env.example .env
-chmod 600 .env
-nano .env
+cp .env.example .env && chmod 600 .env && nano .env
 ```
 
 在 `.env` 填入：
 
 ```ini
-NEXT_PUBLIC_SITE_URL=https://hub.example.edu.tw
+NEXT_PUBLIC_SITE_URL=http://<主機 IP>
 NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-SUPABASE_SERVICE_ROLE_KEY=<service_role key>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon 或 publishable key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role 或 secret key>
 ```
+
+`NEXT_PUBLIC_SITE_URL` 依你的網址填，例如 `https://tllab-1112.<tailnet>.ts.net`。
 
 > `service_role` key 擁有資料庫完整權限，只能放在主機的 `.env`，不可以提交到 git、也不可以給別人。`.env` 已列在 `.gitignore`。
 
@@ -342,11 +377,13 @@ docker compose up -d --build
 docker compose logs -f web
 ```
 
-看到 `Ready` 之後按 Ctrl+C 離開 log。本機測試，應回傳 `HTTP/1.1 200`：
+看到 `Ready` 之後按 Ctrl+C 離開 log。本機測試，應回傳 `{"ok":true}`：
 
 ```bash
-curl -I http://127.0.0.1:3000
+curl http://127.0.0.1:3000/api/health
 ```
+
+約 30 秒後執行 `docker compose ps`，`STATUS` 應顯示 `healthy`。
 
 `NEXT_PUBLIC_*` 會在編譯時寫入網頁，修改後要重新執行 `docker compose up -d --build`。
 
@@ -454,6 +491,8 @@ DATABASE_URL='<新專案的連線字串>' scripts/db-restore.sh /opt/tllab/backu
 
 | 狀況 | 解法 |
 |---|---|
+| 網頁顯示「缺少環境變數 NEXT_PUBLIC_SUPABASE_URL」 | `.env` 沒填或填錯，改好後重新 `docker compose up -d --build` |
+| 登入後顯示「帳號尚未啟用」 | 這個登入帳號沒有對應的成員資料：到 SQL Editor 確認 `members` 有這個 Email，且 `user_id` 已綁定 |
 | `node: ... version 'GLIBC_2.28' not found` | 主機上直接跑了 Node.js 18 以上版本，請改用 Docker（步驟 7） |
 | `db-apply.sh` 卡住或 `could not translate host name` | 用了 Direct connection（只支援 IPv6），改用 **Session pooler** 連線字串；或學校網路擋住 5432 port |
 | `password authentication failed` | 連線字串的密碼不對；密碼有特殊字元時要做 URL 編碼（例如 `@` → `%40`），或到 Database Settings 重設成只有英數字的密碼 |

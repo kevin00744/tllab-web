@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* -----------------------------------------------------------------------------
+ * 色彩 tokens（shadcn/ui neutral）＋ 狀態標籤色
+ * 狀態色固定六組，所有模組共用（見 src/lib/status.ts）
+ * -------------------------------------------------------------------------- */
+:root {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.205 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.205 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.488 0.217 264.4);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --accent: oklch(0.96 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.488 0.217 264.4);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.32 0 0);
+  --sidebar-accent: oklch(0.94 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+
+  --status-gray-bg: oklch(0.95 0 0);
+  --status-gray-fg: oklch(0.42 0 0);
+  --status-blue-bg: oklch(0.94 0.04 255);
+  --status-blue-fg: oklch(0.45 0.16 258);
+  --status-purple-bg: oklch(0.94 0.04 300);
+  --status-purple-fg: oklch(0.47 0.17 300);
+  --status-amber-bg: oklch(0.95 0.06 85);
+  --status-amber-fg: oklch(0.48 0.11 65);
+  --status-green-bg: oklch(0.95 0.05 155);
+  --status-green-fg: oklch(0.45 0.12 155);
+  --status-red-bg: oklch(0.94 0.04 25);
+  --status-red-fg: oklch(0.5 0.18 27);
+}
+
+.dark {
+  --background: oklch(0.17 0 0);
+  --foreground: oklch(0.93 0 0);
+  --card: oklch(0.2 0 0);
+  --card-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.21 0 0);
+  --popover-foreground: oklch(0.93 0 0);
+  --primary: oklch(0.65 0.17 264);
+  --primary-foreground: oklch(0.15 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.25 0 0);
+  --muted-foreground: oklch(0.68 0 0);
+  --accent: oklch(0.26 0 0);
+  --accent-foreground: oklch(0.93 0 0);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.65 0.17 264);
+  --sidebar: oklch(0.19 0 0);
+  --sidebar-foreground: oklch(0.8 0 0);
+  --sidebar-accent: oklch(0.25 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+
+  --status-gray-bg: oklch(0.28 0 0);
+  --status-gray-fg: oklch(0.78 0 0);
+  --status-blue-bg: oklch(0.3 0.07 258);
+  --status-blue-fg: oklch(0.82 0.09 255);
+  --status-purple-bg: oklch(0.3 0.08 300);
+  --status-purple-fg: oklch(0.83 0.1 300);
+  --status-amber-bg: oklch(0.32 0.06 75);
+  --status-amber-fg: oklch(0.86 0.1 85);
+  --status-green-bg: oklch(0.3 0.06 155);
+  --status-green-fg: oklch(0.83 0.11 155);
+  --status-red-bg: oklch(0.31 0.08 25);
+  --status-red-fg: oklch(0.82 0.1 25);
+}
+
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC",
+    "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-status-gray-bg: var(--status-gray-bg);
+  --color-status-gray-fg: var(--status-gray-fg);
+  --color-status-blue-bg: var(--status-blue-bg);
+  --color-status-blue-fg: var(--status-blue-fg);
+  --color-status-purple-bg: var(--status-purple-bg);
+  --color-status-purple-fg: var(--status-purple-fg);
+  --color-status-amber-bg: var(--status-amber-bg);
+  --color-status-amber-fg: var(--status-amber-fg);
+  --color-status-green-bg: var(--status-green-bg);
+  --color-status-green-fg: var(--status-green-fg);
+  --color-status-red-bg: var(--status-red-bg);
+  --color-status-red-fg: var(--status-red-fg);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "palt" 0;
+  }
+}
