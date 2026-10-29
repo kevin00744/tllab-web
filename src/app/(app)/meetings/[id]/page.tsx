@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CalendarIcon, ChevronLeftIcon, ExternalLinkIcon, MapPinIcon } from "lucide-react";
 
 
+import { RecentActivity } from "@/components/activity/recent-activity";
 import { MemberAvatar } from "@/components/layout/user-menu";
 import { Markdown } from "@/components/markdown";
 import { ActionItems } from "@/components/meetings/action-items";
@@ -137,6 +138,7 @@ export default async function MeetingDetailPage({ params }: PageProps<"/meetings
           </section>
         </aside>
       </div>
+      <RecentActivity type="meeting" id={meeting.id} t={t} locale={locale} />
     </>
   );
 }

@@ -2,6 +2,7 @@ import type { Dictionary } from "@/lib/i18n";
 
 export type PageKey =
   | "dashboard"
+  | "activity"
   | "members"
   | "projects"
   | "tasks"
@@ -17,7 +18,12 @@ export type NavGroup = { label?: keyof Dictionary["nav"]; items: NavItem[] };
 
 // emoji 為預設值；實際顯示以資料庫 page_settings 為準（Admin 可修改）
 export const navGroups: NavGroup[] = [
-  { items: [{ key: "dashboard", href: "/", emoji: "🏠" }] },
+  {
+    items: [
+      { key: "dashboard", href: "/", emoji: "🏠" },
+      { key: "activity", href: "/activity", emoji: "🕘" },
+    ],
+  },
   {
     label: "groupTeam",
     items: [

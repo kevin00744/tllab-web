@@ -1,4 +1,5 @@
 import type { AppRole, MemberPosition, ProjectStatus, PublicationStage, TaskPriority, TaskStatus } from "./db";
+import type { SearchType } from "@/lib/search";
 import type { MeetingType } from "./dashboard";
 
 // 對應 supabase/migrations/20261029000008_projects_tasks_publications_api.sql 的 JSON 結構
@@ -254,4 +255,17 @@ export type MeetingDetail = Meeting & {
   summary_version: number;
   decisions: string | null;
   action_items: ActionItem[];
+};
+
+// 對應 supabase/migrations/20261029000015_search_activity_settings.sql
+export type ActivityEntry = {
+  id: number;
+  action: "insert" | "update" | "delete";
+  entity_type: SearchType;
+  entity_id: string;
+  entity_title: string | null;
+  changes: Record<string, unknown> | null;
+  created_at: string;
+  actor: MemberBrief | null;
+  link_key: string | null;
 };

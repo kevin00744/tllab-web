@@ -17,6 +17,7 @@
 | `20261029000011_system_admin.sql` | 系統管理員 `members.is_system_admin`（預設給 PI）：管理員的身分只有系統管理員能變更 |
 | `20261029000013_resources_api.sql` | Resources API（階段 6）：文件、FAQ、軟體、Pipelines、會議與 Action items；`documents.content_version`、`meetings.summary_version` |
 | `20261029000014_meeting_links.sql` | 會議相關連結 `meetings.links`（`[{label, url}]`，只保留 http(s) 網址、最多 20 筆） |
+| `20261029000015_search_activity_settings.sql` | 全站搜尋回傳 `link_key`（文件網址代稱）並搜尋會議地點、Action items、FAQ／Pipeline 標籤；活動紀錄 API；頁面設定 API（階段 7） |
 | `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
@@ -160,7 +161,9 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 
 | 名稱 | 說明 |
 |---|---|
-| `search_all(q, max_results)` | 全站搜尋：成員、專案、任務、論文、會議、文件、FAQ、軟體、Pipelines；中英文部分比對，依相似度排序，遵守 RLS |
+| `search_all(q, max_results)` | 全站搜尋：成員、專案、任務、論文、會議（含地點、Action items）、文件、FAQ、軟體、Pipelines；中英文部分比對，依相似度排序，遵守 RLS；`link_key` 為文件的網址代稱 |
+| `list_activity(filter)` | 活動紀錄（篩選 `entity_type`、`entity_id`、`actor_id`；`before` 為上一頁最後一筆 id）；依時間排序，只改到帳號綁定等內部欄位的更新不列出；`link_key` 為 null 代表資料已刪除 |
+| `list_page_settings()` / `save_page_setting(key, emoji, title, title_en)` | 側邊欄頁面名稱與圖示（修改限 Admin） |
 | `get_dashboard(p_days)` | Dashboard 一次取回：KPI、我的任務（前 8 項）、專案進度、論文各階段數量與最新 3 篇、最近 3 場會議、下次會議、未來 14 天截止日；依呼叫者 RLS |
 | `dashboard_kpis()` | 進行中專案數、本週待辦任務數、逾期任務數、今年已發表數、投稿中（投稿＋審稿修改）數 |
 | `v_project_overview` | 每個專案的手動進度、任務總數／完成數／逾期數與任務完成率 |

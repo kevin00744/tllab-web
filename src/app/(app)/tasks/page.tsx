@@ -4,7 +4,7 @@ import { CalendarDaysIcon, KanbanSquareIcon, ListIcon } from "lucide-react";
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
 import { PageHeader } from "@/components/page-header";
-import { NewTaskButton, TaskProvider } from "@/components/tasks/task-provider";
+import { NewTaskButton, OpenTaskOnLoad, TaskProvider } from "@/components/tasks/task-provider";
 import { TasksBoard } from "@/components/tasks/tasks-board";
 import { TasksCalendar } from "@/components/tasks/tasks-calendar";
 import { TasksList } from "@/components/tasks/tasks-list";
@@ -46,6 +46,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
 
   return (
     <TaskProvider options={options} defaults={{ project_id: project }}>
+      <OpenTaskOnLoad task={tasks.find((x) => x.id === str("task")) ?? null} />
       <PageHeader emoji={meta.emoji} title={meta.title} actions={<NewTaskButton />} />
       <FilterBar>
         <ViewTabs

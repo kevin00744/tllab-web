@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
@@ -50,6 +50,19 @@ export function useTasks() {
   const ctx = useContext(TaskContext);
   if (!ctx) throw new Error("useTasks must be used inside <TaskProvider>");
   return ctx;
+}
+
+/** 由網址（?task=id，例如從搜尋結果點進來）直接打開該任務 */
+export function OpenTaskOnLoad({ task }: { task: Task | null }) {
+  const { openTask } = useTasks();
+  const done = useRef(false);
+  useEffect(() => {
+    if (task && !done.current) {
+      done.current = true;
+      openTask(task);
+    }
+  }, [task, openTask]);
+  return null;
 }
 
 export function NewTaskButton({ defaults, size }: { defaults?: TaskDefaults; size?: "sm" | "default" }) {

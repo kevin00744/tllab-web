@@ -1,8 +1,10 @@
 import "server-only";
 import { cache } from "react";
 
+import type { SearchHit } from "@/lib/search";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  ActivityEntry,
   FormOptions,
   DocumentDetail,
   DocumentItem,
@@ -45,6 +47,10 @@ export const listPublications = (filter: Filter = {}) =>
 export const getPublicationStats = () => rpc<YearStat[]>("publication_year_stats");
 export const listMembers = (filter: Filter = {}) => rpc<MemberProfile[]>("list_members", { p_filter: clean(filter) });
 export const getMember = (id: string) => rpc<MemberDetail | null>("get_member", { p_id: id });
+export const listActivity = (filter: Record<string, string | number | undefined> = {}) =>
+  rpc<ActivityEntry[]>("list_activity", { p_filter: Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined && v !== "")) });
+export const listPageSettings = () => rpc<{ key: string; emoji: string; title: string; title_en: string }[]>("list_page_settings");
+export const searchAll = (q: string, max = 30) => rpc<SearchHit[]>("search_all", { q, max_results: max });
 export const listInviteCodes = () => rpc<InviteCode[]>("list_invite_codes");
 export const listDocuments = () => rpc<DocumentItem[]>("list_documents");
 export const getDocument = (slug: string) => rpc<DocumentDetail | null>("get_document", { p_slug: slug });

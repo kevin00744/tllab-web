@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsUpDownIcon, LogOutIcon, UserCogIcon } from "lucide-react";
+import { ChevronsUpDownIcon, LogOutIcon, SettingsIcon, UserCogIcon } from "lucide-react";
 
 import { signOut } from "@/app/(auth)/actions";
 import { useI18n } from "@/lib/i18n/client";
@@ -54,6 +54,13 @@ export function UserMenu({ member }: { member: Member }) {
             <UserCogIcon /> {t.nav.account}
           </Link>
         </DropdownMenuItem>
+        {member.app_role === "admin" ? (
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+              <SettingsIcon /> {t.nav.settings}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
           <LogOutIcon className="text-destructive" /> {t.header.signOut}
         </DropdownMenuItem>

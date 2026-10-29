@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import type { PublicationInput } from "@/app/(app)/publications/actions";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,19 @@ export function usePublications() {
   const ctx = useContext(PublicationContext);
   if (!ctx) throw new Error("usePublications must be used inside <PublicationProvider>");
   return ctx;
+}
+
+/** 由網址（?pub=id，例如從搜尋結果點進來）直接打開該論文 */
+export function OpenPublicationOnLoad({ publication }: { publication: Publication | null }) {
+  const { open } = usePublications();
+  const done = useRef(false);
+  useEffect(() => {
+    if (publication && !done.current) {
+      done.current = true;
+      open(publication);
+    }
+  }, [publication, open]);
+  return null;
 }
 
 export function NewPublicationButton({ size }: { size?: "sm" | "default" }) {

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { MenuIcon, SearchIcon } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 
 import { useI18n } from "@/lib/i18n/client";
 import type { Member } from "@/types/db";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { SearchDialog } from "@/components/search/search-dialog";
 import { LanguageToggle } from "./language-toggle";
 import { SidebarNav, type SidebarGroup } from "./sidebar-nav";
 import { ThemeToggle } from "./theme-toggle";
@@ -81,15 +82,7 @@ export function AppShell({
           >
             <MenuIcon />
           </Button>
-          <button
-            type="button"
-            disabled
-            title={t.header.searchSoon}
-            className="flex h-8 w-full max-w-xs items-center gap-2 rounded-md border bg-muted/40 px-2.5 text-sm text-muted-foreground disabled:cursor-not-allowed"
-          >
-            <SearchIcon className="size-4" />
-            <span className="truncate">{t.header.search}</span>
-          </button>
+          <SearchDialog />
           <div className="ml-auto flex items-center gap-1">
             <LanguageToggle />
             <ThemeToggle />

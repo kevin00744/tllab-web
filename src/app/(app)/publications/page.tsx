@@ -4,7 +4,7 @@ import { BarChart3Icon, KanbanSquareIcon, TableIcon } from "lucide-react";
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
 import { PageHeader } from "@/components/page-header";
-import { NewPublicationButton, PublicationProvider } from "@/components/publications/publication-provider";
+import { NewPublicationButton, OpenPublicationOnLoad, PublicationProvider } from "@/components/publications/publication-provider";
 import { PublicationStats } from "@/components/publications/publication-stats";
 import { PublicationsBoard, PublicationsTable } from "@/components/publications/publication-views";
 import { getFormOptions, getPublicationStats, isUuid, listPublications } from "@/lib/data";
@@ -42,6 +42,7 @@ export default async function PublicationsPage({ searchParams }: PageProps<"/pub
 
   return (
     <PublicationProvider options={options}>
+      <OpenPublicationOnLoad publication={publications.find((x) => x.id === str("pub")) ?? null} />
       <PageHeader emoji={meta.emoji} title={meta.title} actions={<NewPublicationButton />} />
       <FilterBar>
         <ViewTabs

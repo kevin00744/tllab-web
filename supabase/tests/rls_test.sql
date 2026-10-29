@@ -953,3 +953,57 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- ---------------------------------------------------------------------------
+-- 階段 7：搜尋、活動紀錄、頁面設定（migration 15）
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪（member）
+do $$
+declare
+  j jsonb;
+  k jsonb;
+  v_first bigint;
+begin
+  assert (select link_key from search_all('實驗室規範') where entity_type = 'document' limit 1) = 'lab-rules', '文件回傳網址代稱';
+  assert exists (select 1 from search_all('96-well') where entity_type = 'meeting'), '可搜尋 Action items';
+  assert exists (select 1 from search_all('R911') where entity_type = 'meeting'), '可搜尋會議地點';
+  assert not exists (select 1 from search_all('   '));
+  -- 活動紀錄：產生一筆再查詢
+  perform save_faq('{"question":"活動紀錄測試題","category":"一般"}');
+  j := list_activity('{"entity_type":"faq","limit":5}');
+  assert j -> 0 ->> 'entity_title' = '活動紀錄測試題' and j -> 0 ->> 'action' = 'insert';
+  assert j -> 0 -> 'actor' ->> 'name' = '張家豪';
+  assert j -> 0 ->> 'link_key' = j -> 0 ->> 'entity_id', '仍存在的資料有連結';
+  assert jsonb_array_length(list_activity('{"actor_id":"10000000-0000-0000-0000-000000000005","limit":2}')) = 2;
+  -- 往前翻頁
+  v_first := (list_activity('{"limit":1}') -> 0 ->> 'id')::bigint;
+  k := list_activity(jsonb_build_object('before', v_first, 'limit', 3));
+  assert (k -> 0 ->> 'id')::bigint <> v_first and (k -> 0 ->> 'created_at')::timestamptz <= (list_activity('{"limit":1}') -> 0 ->> 'created_at')::timestamptz, '往前翻頁';
+  assert (k -> 0 ->> 'created_at')::timestamptz >= (k -> 1 ->> 'created_at')::timestamptz, '依時間排序';
+  -- 只動到 user_id 的更新（帳號綁定）不列出
+  assert not exists (select 1 from jsonb_array_elements(list_activity('{"entity_type":"member","limit":100}')) x
+                      where x ->> 'action' = 'update' and (x -> 'changes') ?& array['user_id'] and (select count(*) from jsonb_object_keys(x -> 'changes')) = 1);
+  perform delete_faq((j -> 0 ->> 'entity_id')::uuid);
+  assert (list_activity('{"entity_type":"faq","limit":1}') -> 0 ->> 'action') = 'delete';
+  assert (list_activity('{"entity_type":"faq","limit":1}') -> 0 ->> 'link_key') is null, '已刪除的資料沒有連結';
+  -- 文件：以網址代稱連結
+  perform save_document_content('60000000-0000-0000-0000-000000000002', E'# 實驗室規範\n\n更新', (get_document('lab-rules') ->> 'content_version')::int);
+  assert (list_activity('{"entity_type":"document","limit":1}') -> 0 ->> 'link_key') = 'lab-rules';
+  -- 頁面設定：一般成員不能修改
+  assert jsonb_array_length(list_page_settings()) = 11;
+  begin perform save_page_setting('faq', '🙋', 'Q&A', 'Q&A'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';  -- Admin
+do $$
+begin
+  perform save_page_setting('faq', '🙋', ' 問與答 ', 'Q&A');
+  assert (select emoji || title || title_en from page_settings where key = 'faq') = '🙋問與答Q&A';
+  begin perform save_page_setting('faq', '', '', 'x'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'titleRequired'; end;
+  begin perform save_page_setting('nope', '', 'a', 'b'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;

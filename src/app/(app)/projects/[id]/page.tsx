@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeftIcon } from "lucide-react";
 
+import { RecentActivity } from "@/components/activity/recent-activity";
 import { AvatarStack } from "@/components/common/avatar-stack";
 import { EmptyBlock } from "@/components/common/field";
 import { ProjectDialog } from "@/components/projects/project-dialog";
@@ -155,6 +156,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
           <EmptyBlock>{t.projectsPage.noMeetings}</EmptyBlock>
         )}
       </section>
+      <RecentActivity type="project" id={project.id} t={t} locale={locale} />
     </TaskProvider>
   );
 }
