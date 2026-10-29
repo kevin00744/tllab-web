@@ -15,18 +15,20 @@ export function Deadlines({
   t,
   locale,
   className,
+  scopeLabel,
 }: {
   data: DashboardData;
   t: Dictionary;
   locale: Locale;
   className?: string;
+  scopeLabel?: string;
 }) {
   const days = Array.from({ length: DAYS }, (_, i) => addDays(data.today, i));
   const byDate = new Map<string, DashboardData["deadlines"]>();
   for (const d of data.deadlines) byDate.set(d.due_date, [...(byDate.get(d.due_date) ?? []), d]);
 
   return (
-    <Section title={t.dashboard.deadlines} subtitle={t.dashboard.deadlinesRange} className={className}>
+    <Section title={t.dashboard.deadlines} subtitle={scopeLabel ? `${t.dashboard.deadlinesRange} · ${scopeLabel}` : t.dashboard.deadlinesRange} className={className}>
       {/* 小型行事曆：今天起 14 天，數字為當天截止項目數 */}
       <div className="grid grid-cols-7 gap-1" aria-hidden>
         {days.map((date, i) => {

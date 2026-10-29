@@ -3,6 +3,7 @@ import type { Dictionary } from "@/lib/i18n";
 export type PageKey =
   | "dashboard"
   | "activity"
+  | "calendar"
   | "members"
   | "projects"
   | "tasks"
@@ -21,6 +22,7 @@ export const navGroups: NavGroup[] = [
   {
     items: [
       { key: "dashboard", href: "/", emoji: "🏠" },
+      { key: "calendar", href: "/calendar", emoji: "📅" },
       { key: "activity", href: "/activity", emoji: "🕘" },
     ],
   },

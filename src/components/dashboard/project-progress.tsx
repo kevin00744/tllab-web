@@ -12,14 +12,16 @@ export function ProjectProgress({
   t,
   locale,
   className,
+  subtitle,
 }: {
   data: DashboardData;
   t: Dictionary;
   locale: Locale;
   className?: string;
+  subtitle?: string;
 }) {
   return (
-    <Section title={t.dashboard.projects} href="/projects" linkLabel={t.dashboard.viewAll} className={className}>
+    <Section title={t.dashboard.projects} subtitle={subtitle} href="/projects" linkLabel={t.dashboard.viewAll} className={className}>
       {data.projects.length === 0 ? (
         <EmptyState>{t.dashboard.projectsEmpty}</EmptyState>
       ) : (

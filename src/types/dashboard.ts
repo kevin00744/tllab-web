@@ -1,3 +1,4 @@
+import type { CalendarItem } from "./entities";
 import type { ProjectStatus, PublicationStage, TaskPriority, TaskStatus } from "./db";
 
 // 對應 public.get_dashboard() 的回傳結構（supabase/migrations/20261029000007_dashboard.sql）
@@ -35,6 +36,8 @@ export type DashboardData = {
     task_overdue: number;
     due_date: string | null;
     owner_name: string | null;
+    /** 自己是負責人或參與成員 */
+    mine: boolean;
   }[];
   publication_stages: {
     stage: PublicationStage;
@@ -72,4 +75,8 @@ export type DashboardData = {
     mine: boolean;
     project_title: string | null;
   }[];
+  /** 未來 7 天的行事曆活動與會議 */
+  upcoming: CalendarItem[];
+  /** member_preferences.dashboard（原始值，見 normalizePrefs） */
+  prefs: unknown;
 };

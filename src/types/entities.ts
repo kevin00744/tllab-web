@@ -269,3 +269,29 @@ export type ActivityEntry = {
   actor: MemberBrief | null;
   link_key: string | null;
 };
+
+// 對應 supabase/migrations/20261029000017_calendar_dashboard.sql
+export type CalendarKind = "event" | "meeting" | "task" | "publication";
+export type EventCategory = "event" | "deadline" | "leave" | "booking" | "holiday" | "other";
+export type CalendarItem = {
+  kind: CalendarKind;
+  id: string;
+  title: string;
+  emoji: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  all_day: boolean;
+  start_date: string;
+  end_date: string;
+  location: string | null;
+  /** 活動：類別；會議：類型；任務：優先度；論文：類型 */
+  category: string;
+  status: string | null;
+  description: string | null;
+  project: (Ref & { emoji: string }) | null;
+  mine: boolean;
+  members: MemberBrief[];
+  editable: boolean;
+  deletable: boolean;
+  created_by: MemberBrief | null;
+};

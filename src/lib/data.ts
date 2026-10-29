@@ -5,6 +5,7 @@ import type { SearchHit } from "@/lib/search";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ActivityEntry,
+  CalendarItem,
   FormOptions,
   DocumentDetail,
   DocumentItem,
@@ -50,6 +51,8 @@ export const getMember = (id: string) => rpc<MemberDetail | null>("get_member", 
 export const listActivity = (filter: Record<string, string | number | undefined> = {}) =>
   rpc<ActivityEntry[]>("list_activity", { p_filter: Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined && v !== "")) });
 export const listPageSettings = () => rpc<{ key: string; emoji: string; title: string; title_en: string }[]>("list_page_settings");
+export const listCalendar = (from: string, to: string, filter: { kinds?: string[]; mine?: boolean } = {}) =>
+  rpc<CalendarItem[]>("list_calendar", { p_from: from, p_to: to, p_filter: filter });
 export const searchAll = (q: string, max = 30) => rpc<SearchHit[]>("search_all", { q, max_results: max });
 export const listInviteCodes = () => rpc<InviteCode[]>("list_invite_codes");
 export const listDocuments = () => rpc<DocumentItem[]>("list_documents");

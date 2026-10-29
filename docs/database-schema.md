@@ -19,6 +19,7 @@
 | `20261029000014_meeting_links.sql` | 會議相關連結 `meetings.links`（`[{label, url}]`，只保留 http(s) 網址、最多 20 筆） |
 | `20261029000015_search_activity_settings.sql` | 全站搜尋回傳 `link_key`（文件網址代稱）並搜尋會議地點、Action items、FAQ／Pipeline 標籤；活動紀錄 API；頁面設定 API（階段 7） |
 | `20261029000016_notion_import.sql` | Notion 匯入 `import_notion(p)`、`/notion/<id>` 連結 `resolve_notion(id)`；修正網址代稱截斷後以連字號結尾（階段 8） |
+| `20261029000017_calendar_dashboard.sql` | 共用行事曆 `calendar_events`／`calendar_event_members`、`list_calendar`、個人 Dashboard 設定 `member_preferences`；`get_dashboard` 加入專案 `mine`、未來 7 天行事曆與個人設定（階段 9） |
 | `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
@@ -91,12 +92,15 @@ erDiagram
 | `meeting_attendees` | 出席者／報告人 | `is_presenter` 標記報告人 |
 | `meeting_projects` | 會議 ↔ 專案 | 多對多 |
 | `action_items` | Action items | 內容、負責人、截止日、完成、`task_id`（轉換後的任務） |
+| `calendar_events` | 行事曆 | 標題、類別（活動／截止／請假／儀器預約／假日／其他）、全天、起訖時間、地點、說明（MD）、所屬專案；所有成員可共同編輯，刪除限建立者或 Admin |
+| `calendar_event_members` | 活動 ↔ 成員 | 相關成員（請假的人、參加的人），會出現在他們的 Dashboard |
 
 ### 共通
 
 | 資料表 | 用途 |
 |---|---|
 | `attachments` | 附件中繼資料；實體檔案在 Storage `attachments` bucket，路徑 `{entity_type}/{entity_id}/{uuid}.{ext}`。`kind = slides` 為進度報告，PPT/PPTX 由網頁伺服器以 LibreOffice 轉成 PDF（`preview_path`） |
+| `member_preferences` | 個人設定（目前為 Dashboard：區塊順序、隱藏、`hide_empty`、專案與截止日的顯示範圍）；只有本人能讀寫 |
 | `activity_log` | 誰（`actor_id`）在何時對哪筆資料做了什麼（`insert` / `update` / `delete`），`changes` 記錄欄位新舊值；同一人 10 分鐘內的連續修改合併為一筆，長文字只保留前 300 字 |
 | `page_settings` | 側邊欄各模組頁的 emoji 與中英文標題（Admin 可改）；個別資料列則各自有 `emoji` 欄位 |
 | `invite_codes` | 邀請碼：只存 SHA-256 雜湊與末 4 碼；預設權限、職稱、限定 Email、綁定既有成員、可用次數、有效期限、撤銷 |
@@ -164,6 +168,9 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 |---|---|
 | `search_all(q, max_results)` | 全站搜尋：成員、專案、任務、論文、會議（含地點、Action items）、文件、FAQ、軟體、Pipelines；中英文部分比對，依相似度排序，遵守 RLS；`link_key` 為文件的網址代稱 |
 | `list_activity(filter)` | 活動紀錄（篩選 `entity_type`、`entity_id`、`actor_id`；`before` 為上一頁最後一筆 id）；依時間排序，只改到帳號綁定等內部欄位的更新不列出；`link_key` 為 null 代表資料已刪除 |
+| `list_calendar(from, to, filter)` | 行事曆：活動＋會議＋未完成任務截止日＋未接受論文的截止日；依台灣日期篩選，跨日活動在範圍內任一天都會列出；`filter.kinds`、`filter.mine` |
+| `save_calendar_event(p)` / `delete_calendar_event(id)` | 新增／修改活動與相關成員（共同編輯）、刪除（建立者或 Admin） |
+| `save_dashboard_prefs(p)` | 儲存自己的 Dashboard 設定（只保留已知的區塊與設定值） |
 | `import_notion(p)` / `resolve_notion(id)` | Notion 匯入與內部連結導向（見下方「Notion 匯入」） |
 | `list_page_settings()` / `save_page_setting(key, emoji, title, title_en)` | 側邊欄頁面名稱與圖示（修改限 Admin） |
 | `get_dashboard(p_days)` | Dashboard 一次取回：KPI、我的任務（前 8 項）、專案進度、論文各階段數量與最新 3 篇、最近 3 場會議、下次會議、未來 14 天截止日；依呼叫者 RLS |

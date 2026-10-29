@@ -7,7 +7,8 @@ export type SearchType =
   | "document"
   | "faq"
   | "software_tool"
-  | "pipeline";
+  | "pipeline"
+  | "calendar_event";
 
 export type SearchHit = {
   entity_type: SearchType;
@@ -20,7 +21,18 @@ export type SearchHit = {
 };
 
 /** 搜尋結果分組順序 */
-export const SEARCH_ORDER: SearchType[] = ["member", "project", "task", "publication", "meeting", "document", "faq", "software_tool", "pipeline"];
+export const SEARCH_ORDER: SearchType[] = [
+  "member",
+  "project",
+  "task",
+  "publication",
+  "meeting",
+  "calendar_event",
+  "document",
+  "faq",
+  "software_tool",
+  "pipeline",
+];
 
 /** 各類資料的連結；任務、論文沒有獨立頁面，開啟列表並直接打開該筆 */
 export function hrefFor(hit: Pick<SearchHit, "entity_type" | "id" | "title" | "link_key">): string | null {
@@ -44,6 +56,9 @@ export function hrefFor(hit: Pick<SearchHit, "entity_type" | "id" | "title" | "l
       return `/software/${hit.id}`;
     case "pipeline":
       return `/pipelines/${hit.id}`;
+    case "calendar_event":
+      // link_key：活動日期（台灣時間）
+      return hit.link_key ? `/calendar?date=${hit.link_key}` : null;
     default:
       return null;
   }

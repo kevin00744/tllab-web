@@ -33,7 +33,7 @@ PG_DUMP_CMD="pg_dump" "$ROOT/scripts/db-backup.sh" "$WORK/backups"
 PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d restore_test" "$ROOT/scripts/db-apply.sh" >/dev/null
 PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d restore_test" \
   "$ROOT/scripts/db-restore.sh" "$(ls "$WORK"/backups/tllab-*.dump)"
-for t in members projects tasks publications meetings activity_log page_settings task_assignees documents invite_codes invite_redemptions; do
+for t in members projects tasks publications meetings activity_log page_settings task_assignees documents invite_codes invite_redemptions calendar_events calendar_event_members member_preferences; do
   a="$("${PSQL[@]}" -tA -c "select count(*) from public.$t")"
   b="$("${PSQL[@]}" -d restore_test -tA -c "select count(*) from public.$t")"
   [ "$a" = "$b" ] || { echo "✗ $t 筆數不符：$a vs $b"; exit 1; }

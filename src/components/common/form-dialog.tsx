@@ -44,6 +44,7 @@ export function FormBody({
   onCancel,
   onDelete,
   deleteName,
+  readOnly = false,
   children,
 }: {
   onSubmit: () => void;
@@ -53,6 +54,8 @@ export function FormBody({
   /** 有提供才顯示刪除按鈕；回傳 true 代表已刪除 */
   onDelete?: () => Promise<boolean>;
   deleteName?: string;
+  /** 唯讀：欄位停用，只顯示「關閉」 */
+  readOnly?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
@@ -62,11 +65,11 @@ export function FormBody({
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit();
+        if (!readOnly) onSubmit();
       }}
     >
       <DialogBody>
-        <fieldset disabled={pending} className="grid gap-4">
+        <fieldset disabled={pending || readOnly} className="grid gap-4">
           {error ? (
             <div role="alert" data-slot="form-error" className="rounded-md bg-status-red-bg px-3 py-2 text-sm text-status-red-fg">
               {error}
@@ -76,13 +79,15 @@ export function FormBody({
         </fieldset>
       </DialogBody>
       <DialogFooter>
-        {onDelete ? <ConfirmDelete name={deleteName ?? ""} onConfirm={onDelete} /> : null}
+        {onDelete && !readOnly ? <ConfirmDelete name={deleteName ?? ""} onConfirm={onDelete} /> : null}
         <Button type="button" variant="outline" onClick={onCancel}>
-          {t.common.cancel}
+          {readOnly ? t.common.close : t.common.cancel}
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? t.common.saving : t.common.save}
-        </Button>
+        {readOnly ? null : (
+          <Button type="submit" disabled={pending}>
+            {pending ? t.common.saving : t.common.save}
+          </Button>
+        )}
       </DialogFooter>
     </form>
   );

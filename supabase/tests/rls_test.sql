@@ -991,7 +991,7 @@ begin
   perform save_document_content('60000000-0000-0000-0000-000000000002', E'# 實驗室規範\n\n更新', (get_document('lab-rules') ->> 'content_version')::int);
   assert (list_activity('{"entity_type":"document","limit":1}') -> 0 ->> 'link_key') = 'lab-rules';
   -- 頁面設定：一般成員不能修改
-  assert jsonb_array_length(list_page_settings()) = 11;
+  assert jsonb_array_length(list_page_settings()) = 12;
   begin perform save_page_setting('faq', '🙋', 'Q&A', 'Q&A'); raise exception 'x';
   exception when insufficient_privilege then null; end;
 end $$;
@@ -1103,3 +1103,87 @@ begin
   assert document_slug('Single-Sample Variant Calling HaplotypeCaller GVCF Interpretation Report Extra') !~ '-$';
   assert document_slug(repeat('ab-', 40)) ~ '^[a-z0-9]+(-[a-z0-9]+)*$';
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 階段 9：行事曆、個人化 Dashboard（migration 17）
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪（member）
+do $$
+declare
+  v_ev uuid;
+  v_all uuid;
+  j jsonb;
+  d date := lab_today();
+begin
+  v_ev := save_calendar_event(jsonb_build_object('title', '顯微鏡預約', 'category', 'booking', 'location', 'R911',
+            'starts_at', (d + 1 + time '09:00') at time zone 'Asia/Taipei', 'ends_at', (d + 1 + time '13:00') at time zone 'Asia/Taipei',
+            'member_ids', jsonb_build_array('10000000-0000-0000-0000-000000000006'), 'project_id', '20000000-0000-0000-0000-000000000001'));
+  v_all := save_calendar_event(jsonb_build_object('title', '研討會', 'all_day', true,
+            'starts_at', (d + 2)::timestamp at time zone 'Asia/Taipei', 'ends_at', (d + 4)::timestamp at time zone 'Asia/Taipei'));
+  j := list_calendar(d, d + 6, '{"kinds":["event"]}');
+  assert jsonb_array_length(j) = 2, j::text;
+  assert (j -> 0 ->> 'title') = '顯微鏡預約' and (j -> 0 ->> 'start_date')::date = d + 1 and (j -> 0 -> 'project' ->> 'title') is not null;
+  assert (j -> 1 ->> 'end_date')::date = d + 4 and (j -> 1 ->> 'all_day')::boolean, '跨日全天活動';
+  -- 跨日活動：範圍只涵蓋中間某天也會出現
+  assert jsonb_array_length(list_calendar(d + 3, d + 3, '{"kinds":["event"]}')) = 1;
+  -- 任務截止日、會議、論文截止日
+  assert exists (select 1 from jsonb_array_elements(list_calendar(d - 30, d + 30, '{}')) x where x ->> 'kind' = 'task');
+  assert exists (select 1 from jsonb_array_elements(list_calendar(d - 30, d + 30, '{}')) x where x ->> 'kind' = 'meeting');
+  assert not exists (select 1 from jsonb_array_elements(list_calendar(d - 365, d + 365, '{"kinds":["task"]}')) x where x ->> 'status' = 'done');
+  -- 只看自己的
+  assert not exists (select 1 from jsonb_array_elements(list_calendar(d - 30, d + 30, '{"mine":true}')) x where not (x ->> 'mine')::boolean);
+  -- 驗證
+  begin perform save_calendar_event('{"title":" ","starts_at":"2026-11-01T00:00:00Z"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'titleRequired'; end;
+  begin perform save_calendar_event('{"title":"x","starts_at":"2026-11-02T00:00:00Z","ends_at":"2026-11-01T00:00:00Z"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'dateOrder'; end;
+  -- 活動紀錄與搜尋
+  assert (list_activity('{"entity_type":"calendar_event","limit":1}') -> 0 ->> 'link_key') = to_char(d + 2, 'YYYY-MM-DD');
+  assert (select link_key from search_all('顯微鏡預約') where entity_type = 'calendar_event') = to_char(d + 1, 'YYYY-MM-DD');
+  -- Dashboard：未來 7 天、專案 mine 標示、個人設定
+  j := get_dashboard(14);
+  assert jsonb_array_length(j -> 'upcoming') >= 2;
+  assert exists (select 1 from jsonb_array_elements(j -> 'projects') x where (x ->> 'mine')::boolean);
+  assert exists (select 1 from jsonb_array_elements(j -> 'projects') x where not (x ->> 'mine')::boolean);
+  assert j -> 'prefs' = '{}'::jsonb;
+  j := save_dashboard_prefs('{"order":["calendar","nope","my_tasks"],"hidden":["kpis","kpis","x"],"hide_empty":false,"scope":{"projects":"mine","deadlines":"bad"}}');
+  assert j -> 'order' = '["calendar","my_tasks"]' and j -> 'hidden' = '["kpis"]' and not (j ->> 'hide_empty')::boolean;
+  assert j -> 'scope' ->> 'projects' = 'mine' and j -> 'scope' ->> 'deadlines' = 'auto';
+  assert get_dashboard(14) -> 'prefs' -> 'scope' ->> 'projects' = 'mine';
+  -- 自己建立的可以刪除
+  perform delete_calendar_event(v_all);
+end $$;
+
+-- 共同編輯：其他成員可以修改、不能刪除；看不到別人的個人設定
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';  -- 陳怡君（admin）
+do $$
+begin
+  assert (select count(*) from member_preferences) = 0, '只看得到自己的設定';
+end $$;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000013';  -- 楊子豪（viewer）
+do $$
+declare
+  v uuid := (select id from calendar_events where title = '顯微鏡預約');
+begin
+  assert v is not null, 'viewer 可讀';
+  begin perform save_calendar_event(jsonb_build_object('id', v, 'title', '改', 'starts_at', now())); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform save_calendar_event('{"title":"x","starts_at":"2026-11-01T00:00:00Z"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000006';  -- 黃柏翰（member，非建立者）
+do $$
+declare
+  v uuid := (select id from calendar_events where title = '顯微鏡預約');
+begin
+  perform save_calendar_event(jsonb_build_object('id', v, 'title', '顯微鏡預約（延長）', 'starts_at', (select starts_at from calendar_events where id = v)));
+  assert (select title from calendar_events where id = v) = '顯微鏡預約（延長）', '成員可共同編輯';
+  begin perform delete_calendar_event(v); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
