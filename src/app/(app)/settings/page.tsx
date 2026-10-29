@@ -30,6 +30,8 @@ const MATRIX: { key: string; cells: ("yes" | "own" | "no")[] }[] = [
   { key: "invites", cells: ["yes", "yes", "no", "no"] },
   { key: "admins", cells: ["yes", "no", "no", "no"] },
   { key: "settings", cells: ["yes", "yes", "no", "no"] },
+  { key: "activity", cells: ["yes", "yes", "no", "no"] },
+  { key: "activityDelete", cells: ["yes", "no", "no", "no"] },
 ];
 
 export default async function SettingsPage() {

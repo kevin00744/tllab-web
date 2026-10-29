@@ -34,9 +34,6 @@ export const SEARCH_ORDER: SearchType[] = [
   "pipeline",
 ];
 
-/** 訪客（未登入）看不到的類型 */
-export const GUEST_HIDDEN_TYPES: SearchType[] = ["meeting", "calendar_event"];
-
 /** 各類資料的連結；任務、論文沒有獨立頁面，開啟列表並直接打開該筆 */
 export function hrefFor(hit: Pick<SearchHit, "entity_type" | "id" | "title" | "link_key">): string | null {
   const q = encodeURIComponent(hit.title);

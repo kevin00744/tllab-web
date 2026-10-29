@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getCurrentMember } from "@/lib/auth";
 import { listActivity } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import type { Dictionary } from "@/lib/i18n";
@@ -7,8 +8,9 @@ import type { Locale } from "@/lib/i18n/config";
 import type { SearchType } from "@/lib/search";
 import { ActivityFeed } from "./activity-feed";
 
-/** 詳細頁底部的「最近變更」 */
+/** 詳細頁底部的「最近變更」（只有 Admin 看得到） */
 export async function RecentActivity({ type, id, t, locale }: { type: SearchType; id: string; t: Dictionary; locale: Locale }) {
+  if ((await getCurrentMember())?.app_role !== "admin") return null;
   const entries = await listActivity({ entity_type: type, entity_id: id, limit: 8 });
   return (
     <section aria-labelledby="recent-activity" className="mt-10">

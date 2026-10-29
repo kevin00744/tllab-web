@@ -7,7 +7,7 @@ import { TriangleAlertIcon } from "lucide-react";
 
 import { getCurrentMember, getUserId, mustChangePassword } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
-import { GUEST_HIDDEN, navGroups } from "@/lib/nav";
+import { ADMIN_ONLY, GUEST_HIDDEN, navGroups } from "@/lib/nav";
 import { getPageMetas } from "@/lib/pages";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -38,7 +38,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const metas = await getPageMetas(locale, t);
   const groups: SidebarGroup[] = navGroups.map((group) => ({
     label: group.label ? t.nav[group.label] : undefined,
-    items: group.items.filter((item) => member || !GUEST_HIDDEN.includes(item.key)).map((item) => metas.get(item.key)!),
+    items: group.items
+      .filter((item) => (member || !GUEST_HIDDEN.includes(item.key)) && (member?.app_role === "admin" || !ADMIN_ONLY.includes(item.key)))
+      .map((item) => metas.get(item.key)!),
   }));
 
   return (

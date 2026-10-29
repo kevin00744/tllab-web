@@ -3,6 +3,13 @@
 -- 失敗時 raise exception 中止
 -- =============================================================================
 
+-- 測試用：活動紀錄只有 Admin 讀得到（migration 19），以下用 definer helper 檢查 trigger 寫入的內容
+create function public.t_activity() returns setof public.activity_log
+language sql security definer set search_path = '' as $$ select * from public.activity_log $$;
+create function public.t_list_activity(p jsonb) returns jsonb
+language sql security definer set search_path = '' as $$ select public.list_activity(p) $$;
+grant execute on function public.t_activity(), public.t_list_activity(jsonb) to authenticated;
+
 -- 模擬登入：PI(admin)、張家豪(member)、楊子豪(校友 viewer)、未登記的新帳號
 insert into auth.users (id, email, raw_user_meta_data) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'PI@tllab.example', '{"full_name": "Tsung-Lin Liu"}'),
@@ -119,10 +126,10 @@ begin
   end;
 
   -- 活動紀錄
-  assert exists (select 1 from activity_log
+  assert exists (select 1 from t_activity()
                   where actor_id = '10000000-0000-0000-0000-000000000005'
                     and entity_type = 'project' and changes ? 'progress'), '應記錄專案修改';
-  assert exists (select 1 from activity_log
+  assert exists (select 1 from t_activity()
                   where entity_id = v_task and changes ? 'assignee_added'), '應記錄指派';
 
   -- 搜尋（中英文）
@@ -579,13 +586,13 @@ declare
 begin
   v := (get_project('20000000-0000-0000-0000-000000000001') ->> 'content_version')::int;
   assert (get_project('20000000-0000-0000-0000-000000000001') -> 'files') is not null, '詳細頁含檔案';
-  select count(*) into n_before from activity_log where entity_id = '20000000-0000-0000-0000-000000000001';
+  select count(*) into n_before from t_activity() where entity_id = '20000000-0000-0000-0000-000000000001';
   v := save_project_content('20000000-0000-0000-0000-000000000001', '# 第一版', v);
   v := save_project_content('20000000-0000-0000-0000-000000000001', '# 第二版' || long, v);
   assert (select content from projects where id = '20000000-0000-0000-0000-000000000001') like '# 第二版%';
-  assert (select count(*) from activity_log where entity_id = '20000000-0000-0000-0000-000000000001') <= n_before + 1,
+  assert (select count(*) from t_activity() where entity_id = '20000000-0000-0000-0000-000000000001') <= n_before + 1,
     '連續修改應合併為一筆';
-  assert (select length(changes -> 'content' ->> 'new') from activity_log
+  assert (select length(changes -> 'content' ->> 'new') from t_activity()
            where entity_id = '20000000-0000-0000-0000-000000000001' order by created_at desc limit 1) <= 301,
     '長文字應截短';
   -- 用舊版本號儲存 → 衝突
@@ -972,25 +979,25 @@ begin
   assert not exists (select 1 from search_all('   '));
   -- 活動紀錄：產生一筆再查詢
   perform save_faq('{"question":"活動紀錄測試題","category":"一般"}');
-  j := list_activity('{"entity_type":"faq","limit":5}');
+  j := t_list_activity('{"entity_type":"faq","limit":5}');
   assert j -> 0 ->> 'entity_title' = '活動紀錄測試題' and j -> 0 ->> 'action' = 'insert';
   assert j -> 0 -> 'actor' ->> 'name' = '張家豪';
   assert j -> 0 ->> 'link_key' = j -> 0 ->> 'entity_id', '仍存在的資料有連結';
-  assert jsonb_array_length(list_activity('{"actor_id":"10000000-0000-0000-0000-000000000005","limit":2}')) = 2;
+  assert jsonb_array_length(t_list_activity('{"actor_id":"10000000-0000-0000-0000-000000000005","limit":2}')) = 2;
   -- 往前翻頁
-  v_first := (list_activity('{"limit":1}') -> 0 ->> 'id')::bigint;
-  k := list_activity(jsonb_build_object('before', v_first, 'limit', 3));
-  assert (k -> 0 ->> 'id')::bigint <> v_first and (k -> 0 ->> 'created_at')::timestamptz <= (list_activity('{"limit":1}') -> 0 ->> 'created_at')::timestamptz, '往前翻頁';
+  v_first := (t_list_activity('{"limit":1}') -> 0 ->> 'id')::bigint;
+  k := t_list_activity(jsonb_build_object('before', v_first, 'limit', 3));
+  assert (k -> 0 ->> 'id')::bigint <> v_first and (k -> 0 ->> 'created_at')::timestamptz <= (t_list_activity('{"limit":1}') -> 0 ->> 'created_at')::timestamptz, '往前翻頁';
   assert (k -> 0 ->> 'created_at')::timestamptz >= (k -> 1 ->> 'created_at')::timestamptz, '依時間排序';
   -- 只動到 user_id 的更新（帳號綁定）不列出
-  assert not exists (select 1 from jsonb_array_elements(list_activity('{"entity_type":"member","limit":100}')) x
+  assert not exists (select 1 from jsonb_array_elements(t_list_activity('{"entity_type":"member","limit":100}')) x
                       where x ->> 'action' = 'update' and (x -> 'changes') ?& array['user_id'] and (select count(*) from jsonb_object_keys(x -> 'changes')) = 1);
   perform delete_faq((j -> 0 ->> 'entity_id')::uuid);
-  assert (list_activity('{"entity_type":"faq","limit":1}') -> 0 ->> 'action') = 'delete';
-  assert (list_activity('{"entity_type":"faq","limit":1}') -> 0 ->> 'link_key') is null, '已刪除的資料沒有連結';
+  assert (t_list_activity('{"entity_type":"faq","limit":1}') -> 0 ->> 'action') = 'delete';
+  assert (t_list_activity('{"entity_type":"faq","limit":1}') -> 0 ->> 'link_key') is null, '已刪除的資料沒有連結';
   -- 文件：以網址代稱連結
   perform save_document_content('60000000-0000-0000-0000-000000000002', E'# 實驗室規範\n\n更新', (get_document('lab-rules') ->> 'content_version')::int);
-  assert (list_activity('{"entity_type":"document","limit":1}') -> 0 ->> 'link_key') = 'lab-rules';
+  assert (t_list_activity('{"entity_type":"document","limit":1}') -> 0 ->> 'link_key') = 'lab-rules';
   -- 頁面設定：一般成員不能修改
   assert jsonb_array_length(list_page_settings()) = 12;
   begin perform save_page_setting('faq', '🙋', 'Q&A', 'Q&A'); raise exception 'x';
@@ -1140,7 +1147,7 @@ begin
   begin perform save_calendar_event('{"title":"x","starts_at":"2026-11-02T00:00:00Z","ends_at":"2026-11-01T00:00:00Z"}'); raise exception 'x';
   exception when invalid_parameter_value then assert sqlerrm = 'dateOrder'; end;
   -- 活動紀錄與搜尋
-  assert (list_activity('{"entity_type":"calendar_event","limit":1}') -> 0 ->> 'link_key') = to_char(d + 2, 'YYYY-MM-DD');
+  assert (t_list_activity('{"entity_type":"calendar_event","limit":1}') -> 0 ->> 'link_key') = to_char(d + 2, 'YYYY-MM-DD');
   assert (select link_key from search_all('顯微鏡預約') where entity_type = 'calendar_event') = to_char(d + 1, 'YYYY-MM-DD');
   -- Dashboard：未來 7 天、專案 mine 標示、個人設定
   j := get_dashboard(14);
@@ -1212,8 +1219,8 @@ begin
   assert (select count(*) from attachments) = 0, 'anon 不可讀附件';
   assert (select count(*) from invite_codes) = 0, 'anon 不可讀邀請碼';
   assert (select count(*) from member_preferences) = 0;
-  assert not exists (select 1 from activity_log where entity_type in ('meeting', 'calendar_event')), 'anon 看不到會議活動';
-  assert exists (select 1 from activity_log where entity_type = 'project'), 'anon 看得到專案活動';
+  begin perform 1 from activity_log; raise exception 'anon 不應可讀活動紀錄';
+  exception when insufficient_privilege then null; end;
   begin perform user_id from members limit 1; raise exception 'x';
   exception when insufficient_privilege then null; end;
   begin perform app_role from members limit 1; raise exception 'x';
@@ -1265,8 +1272,8 @@ begin
   select count(*) into n from search_all('tllab.example', 50);
   assert n = 0, 'anon 不能以 email 搜尋成員';
   assert (select count(*) from search_all('斑馬魚', 50)) > 0, 'anon 可搜尋公開資料';
-  j := list_activity('{}');
-  assert not exists (select 1 from jsonb_array_elements(coalesce(j -> 'items', j)) e where e ->> 'entity_type' = 'meeting');
+  begin perform list_activity('{}'); raise exception 'anon 不應可呼叫 list_activity';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 
@@ -1277,12 +1284,14 @@ do $$
 begin
   assert get_member('10000000-0000-0000-0000-000000000001') ->> 'email' is not null, '登入後可看到 email';
   assert exists (select 1 from meetings), '登入後可看到會議';
+  assert (select count(*) from activity_log) = 0 and jsonb_array_length(list_activity('{}')) = 0, '一般成員看不到活動紀錄';
   begin perform delete_activity('{"before":"2100-01-01"}'); raise exception '一般成員不可批量刪除';
   exception when insufficient_privilege then null; end;
 end $$;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';  -- 陳怡君（admin，非系統管理員）
 do $$
 begin
+  assert (select count(*) from activity_log) > 0, 'Admin 看得到活動紀錄';
   begin perform delete_activity('{"before":"2100-01-01"}'); raise exception '管理員不可批量刪除';
   exception when insufficient_privilege then null; end;
 end $$;
@@ -1307,3 +1316,6 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+drop function public.t_activity();
+drop function public.t_list_activity(jsonb);
