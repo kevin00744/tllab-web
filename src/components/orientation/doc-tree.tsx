@@ -17,8 +17,12 @@ export function DocTree({ nodes, current, depth = 0 }: { nodes: DocNode[]; curre
               n.slug === current && "bg-accent font-medium text-foreground",
             )}
           >
-            <span aria-hidden>{n.emoji}</span>
-            <span className="truncate">{n.title}</span>
+            <span aria-hidden className="shrink-0">
+              {n.emoji}
+            </span>
+            <span className="min-w-0 truncate" title={n.title}>
+              {n.title}
+            </span>
           </Link>
           {n.children.length ? <DocTree nodes={n.children} current={current} depth={depth + 1} /> : null}
         </li>

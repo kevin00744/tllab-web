@@ -37,7 +37,7 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)_12rem]">
-      <nav aria-label={t.orientationPage.contents} className="lg:sticky lg:top-16">
+      <nav aria-label={t.orientationPage.contents} className="min-w-0 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-5rem)] lg:overflow-y-auto">
         <div className="mb-2 flex items-center justify-between">
           <Link href="/orientation" className="text-sm font-semibold">
             {meta.emoji} {meta.title}

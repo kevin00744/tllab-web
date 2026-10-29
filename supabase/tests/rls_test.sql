@@ -1007,3 +1007,99 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- ---------------------------------------------------------------------------
+-- 階段 8：Notion 匯入（migration 16）— 使用合成資料
+-- ---------------------------------------------------------------------------
+create temporary table _np (p jsonb);
+insert into _np values ($json${
+  "mode": "skip",
+  "members": [
+    {"key": "row:a", "notion_id": "aaaa0000000000000000000000000001", "name": "Notion 新人", "email": "Newbie@Notion.test", "position": "phd", "research_interests": ["單細胞"], "bio": "從 Notion 匯入", "project_notion_ids": ["bbbb0000000000000000000000000001"]},
+    {"key": "member:pi", "existing_id": "10000000-0000-0000-0000-000000000001", "name": "Tsung-Lin Liu"},
+    {"key": "person:helper", "notion_id": "person:helper", "name": "Helper"}
+  ],
+  "projects": [{"notion_id": "bbbb0000000000000000000000000001", "title": "Notion 專案", "status": "active", "progress": 67,
+                "start_date": "2025-08-01", "due_date": "2025-07-01", "description": "摘要", "content": "# 內容\n\n[子頁](/notion/eeee0000000000000000000000000002)",
+                "tags": ["農業部"], "owner_key": "member:pi", "member_keys": ["person:helper", "missing"]}],
+  "tasks": [{"notion_id": "cccc0000000000000000000000000001", "title": "Notion 任務", "description": "", "status": "done", "priority": "high",
+             "due_date": "2025-08-31", "project_notion_id": "bbbb0000000000000000000000000001", "assignee_keys": ["row:a"]}],
+  "publications": [{"notion_id": "dddd0000000000000000000000000001", "title": "Notion 論文", "stage": "submitted", "venue": "Bioinformatics", "doi": "",
+                    "submitted_at": "2025-09-01", "published_at": null, "notes": "", "project_notion_id": "bbbb0000000000000000000000000001",
+                    "authors": [{"key": "row:a", "name": "Notion 新人", "is_first": true, "is_corresponding": false},
+                                {"key": null, "name": "External Author", "is_first": false, "is_corresponding": true}]}],
+  "software": [{"notion_id": "ffff0000000000000000000000000001", "name": "SLiM", "category": "", "purpose": "模擬", "access_info": "- **版本**：V4.3",
+                "install_guide": "```bash\nmake\n```", "url": "https://messerlab.org/slim/", "docs_url": "ftp://bad", "contact_key": "row:a"}],
+  "pipelines": [{"notion_id": "ffff0000000000000000000000000002", "name": "Variant calling", "description": "## 使用工具", "version": "",
+                 "tags": ["GATK", "GATK"], "maintainer_key": "person:helper", "project_notion_id": "bbbb0000000000000000000000000001"}],
+  "meetings": [{"notion_id": "ffff0000000000000000000000000003", "title": "Progress meeting", "type": "lab_meeting", "starts_at": "2025-09-05T00:00:00+08:00",
+                "summary": "> 備註", "links": [{"label": "會議連結", "url": "https://teams.microsoft.com/x"}],
+                "attendee_keys": ["row:a", "member:pi"], "project_notion_ids": ["bbbb0000000000000000000000000001"]}],
+  "documents": [{"notion_id": "notion-import-root", "title": "Notion 匯入", "content": "", "parent_notion_id": null},
+                {"notion_id": "eeee0000000000000000000000000002", "title": "Variant Calling Pipeline Guide", "content": "步驟", "parent_notion_id": "notion-import-root"}],
+  "faqs": [{"notion_id": "eeee0000000000000000000000000003-1", "question": "Who do I ask?", "answer": "PI", "category": "Notion"}]
+}$json$);
+grant select on _np to authenticated;
+
+-- 非 Admin 不能匯入
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';
+do $$
+begin
+  begin perform import_notion((select p from _np)); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm = 'noPermission', sqlerrm; end;
+end $$;
+
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';  -- 系統管理員
+do $$
+declare
+  s jsonb;
+  v_member uuid;
+  v_project uuid;
+begin
+  s := import_notion((select p from _np));
+  assert (s -> 'members' ->> 'created')::int = 2 and (s -> 'members' ->> 'linked')::int = 1, s::text;
+  assert (s -> 'projects' ->> 'created')::int = 1 and (s -> 'documents' ->> 'created')::int = 2, s::text;
+  select id into v_member from members where notion_id = 'aaaa0000000000000000000000000001';
+  select id into v_project from projects where notion_id = 'bbbb0000000000000000000000000001';
+  assert (select email = 'newbie@notion.test' and position = 'phd' and app_role = 'member' from members where id = v_member);
+  assert (select status = 'active' and progress = 67 and due_date is null and owner_id = '10000000-0000-0000-0000-000000000001'
+            and content like '# 內容%' from projects where id = v_project), '截止日早於開始日時不填';
+  assert (select count(*) from project_members where project_id = v_project) = 2, '專案成員（Helper + 目錄中的參與專案）';
+  assert exists (select 1 from task_assignees ta join tasks t on t.id = ta.task_id
+                  where t.notion_id = 'cccc0000000000000000000000000001' and ta.member_id = v_member and t.project_id = v_project);
+  assert (select string_agg(coalesce(display_name, '#') || ':' || is_first_author || is_corresponding, ',' order by author_order)
+            from publication_authors pa join publications pb on pb.id = pa.publication_id
+           where pb.notion_id = 'dddd0000000000000000000000000001') = '#:truefalse,External Author:falsetrue';
+  assert (select category = '其他' and docs_url is null and contact_id = v_member from software_tools where notion_id = 'ffff0000000000000000000000000001');
+  assert (select tags = array['GATK'] and version = '1.0.0' and project_id = v_project from pipelines where notion_id = 'ffff0000000000000000000000000002');
+  assert (select jsonb_array_length(links) = 1 from meetings where notion_id = 'ffff0000000000000000000000000003');
+  assert (select count(*) from meeting_attendees ma join meetings m on m.id = ma.meeting_id where m.notion_id = 'ffff0000000000000000000000000003') = 2;
+  assert (select p.notion_id from documents d join documents p on p.id = d.parent_id where d.notion_id = 'eeee0000000000000000000000000002') = 'notion-import-root';
+  assert (select slug from documents where notion_id = 'eeee0000000000000000000000000002') = 'variant-calling-pipeline-guide';
+  assert resolve_notion('eeee0000000000000000000000000002') ->> 'slug' = 'variant-calling-pipeline-guide';
+  assert resolve_notion('bbbb0000000000000000000000000001') ->> 'id' = v_project::text;
+  assert resolve_notion('nope') is null;
+  -- 再匯入一次（略過已存在）：不重複
+  s := import_notion((select p from _np));
+  assert (s -> 'projects' ->> 'skipped')::int = 1 and (s -> 'projects' ->> 'created') is null, s::text;
+  assert (select count(*) from members where notion_id in ('aaaa0000000000000000000000000001', 'person:helper')) = 2;
+  assert (select count(*) from documents where notion_id like 'notion-import-root') = 1;
+  -- 以 Notion 內容更新
+  s := import_notion(jsonb_set(jsonb_set((select p from _np), '{mode}', '"update"'), '{projects,0,title}', '"Notion 專案（更新）"'));
+  assert (s -> 'projects' ->> 'updated')::int = 1, s::text;
+  assert (select title from projects where id = v_project) = 'Notion 專案（更新）';
+  assert (select count(*) from publication_authors pa join publications pb on pb.id = pa.publication_id
+           where pb.notion_id = 'dddd0000000000000000000000000001') = 2, '更新時作者不重複';
+  begin perform import_notion('{"mode":"x"}'); raise exception 'x';
+  exception when invalid_parameter_value then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- 網址代稱：截斷後不以連字號結尾
+do $$
+begin
+  assert document_slug('Single-Sample Variant Calling HaplotypeCaller GVCF Interpretation Report Extra') !~ '-$';
+  assert document_slug(repeat('ab-', 40)) ~ '^[a-z0-9]+(-[a-z0-9]+)*$';
+end $$;

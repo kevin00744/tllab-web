@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckIcon, MinusIcon, TicketIcon } from "lucide-react";
+import { CheckIcon, DownloadIcon, MinusIcon, TicketIcon } from "lucide-react";
 
 import { MemberAvatar } from "@/components/layout/user-menu";
 import { PageHeader } from "@/components/page-header";
@@ -55,11 +55,18 @@ export default async function SettingsPage() {
         title={s.title}
         description={s.description}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/members/invites">
-              <TicketIcon /> {t.membersPage.invites}
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link href="/settings/import">
+                <DownloadIcon /> {t.importPage.title}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/members/invites">
+                <TicketIcon /> {t.membersPage.invites}
+              </Link>
+            </Button>
+          </>
         }
       />
 
