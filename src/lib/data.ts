@@ -4,12 +4,20 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type {
   FormOptions,
+  DocumentDetail,
+  DocumentItem,
+  Faq,
   InviteCode,
+  Meeting,
+  MeetingDetail,
   MemberDetail,
   MemberProfile,
   Project,
   ProjectDetail,
+  Pipeline,
+  PipelineDetail,
   Publication,
+  SoftwareTool,
   Task,
   YearStat,
 } from "@/types/entities";
@@ -38,6 +46,16 @@ export const getPublicationStats = () => rpc<YearStat[]>("publication_year_stats
 export const listMembers = (filter: Filter = {}) => rpc<MemberProfile[]>("list_members", { p_filter: clean(filter) });
 export const getMember = (id: string) => rpc<MemberDetail | null>("get_member", { p_id: id });
 export const listInviteCodes = () => rpc<InviteCode[]>("list_invite_codes");
+export const listDocuments = () => rpc<DocumentItem[]>("list_documents");
+export const getDocument = (slug: string) => rpc<DocumentDetail | null>("get_document", { p_slug: slug });
+export const listFaqs = (filter: Filter = {}) => rpc<Faq[]>("list_faqs", { p_filter: clean(filter) });
+export const getFaqCategories = () => rpc<{ category: string; count: number }[]>("faq_categories");
+export const listSoftware = (filter: Filter = {}) => rpc<SoftwareTool[]>("list_software", { p_filter: clean(filter) });
+export const getSoftware = (id: string) => rpc<SoftwareTool | null>("get_software", { p_id: id });
+export const listPipelines = (filter: Filter = {}) => rpc<Pipeline[]>("list_pipelines", { p_filter: clean(filter) });
+export const getPipeline = (id: string) => rpc<PipelineDetail | null>("get_pipeline", { p_id: id });
+export const listMeetings = (filter: Filter = {}) => rpc<Meeting[]>("list_meetings", { p_filter: clean(filter) });
+export const getMeeting = (id: string) => rpc<MeetingDetail | null>("get_meeting", { p_id: id });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);

@@ -12,3 +12,22 @@ export function plainExcerpt(markdown: string | null | undefined, max = 140) {
     .trim();
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }
+
+export type Heading = { level: 1 | 2 | 3; text: string; id: string };
+
+/**
+ * 取出 Markdown 的 1–3 級標題（目錄用）。id 依出現順序編號，
+ * 與 <Markdown anchors> 渲染時加在標題上的 id 相同。
+ */
+export function extractHeadings(markdown: string): Heading[] {
+  const headings: Heading[] = [];
+  let fence = false;
+  for (const line of markdown.split("\n")) {
+    if (/^\s{0,3}(```|~~~)/.test(line)) fence = !fence;
+    if (fence) continue;
+    const m = /^\s{0,3}(#{1,3})\s+(.+?)\s*#*\s*$/.exec(line);
+    if (!m) continue;
+    headings.push({ level: m[1].length as 1 | 2 | 3, text: plainExcerpt(m[2], 120), id: `h-${headings.length + 1}` });
+  }
+  return headings;
+}

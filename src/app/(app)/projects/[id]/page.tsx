@@ -144,9 +144,9 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
                 <span className="w-24 shrink-0 text-xs text-muted-foreground">
                   {formatDateTime(locale, m.starts_at, { dateStyle: "medium" })}
                 </span>
-                <span className="min-w-0 flex-1 truncate">
+                <Link href={`/meetings/${m.id}`} className="min-w-0 flex-1 truncate hover:underline">
                   {m.emoji} {m.title}
-                </span>
+                </Link>
                 <Badge tone="gray">{t.meetingType[m.type]}</Badge>
               </li>
             ))}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CalendarClockIcon, MapPinIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -31,9 +32,9 @@ export function Meetings({
         {next ? (
           <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium">
+              <Link href={`/meetings/${next.id}`} className="block truncate text-sm font-medium hover:underline">
                 {next.emoji} {next.title}
-              </div>
+              </Link>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
                 <span>
                   {formatDateTime(locale, next.starts_at, {
@@ -77,7 +78,9 @@ export function Meetings({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-medium">{m.title}</span>
+                  <Link href={`/meetings/${m.id}`} className="truncate text-sm font-medium hover:underline">
+                    {m.title}
+                  </Link>
                   <Badge tone="gray">{t.meetingType[m.type]}</Badge>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">

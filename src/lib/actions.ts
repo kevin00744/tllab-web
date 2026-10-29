@@ -16,6 +16,10 @@ const VALIDATION: ActionError[] = [
   "emailInvalid",
   "emailTaken",
   "cannotDeleteSelf",
+  "slugInvalid",
+  "slugTaken",
+  "invalidParent",
+  "dateRequired",
 ];
 
 /** 資料庫函式的錯誤碼 → 介面訊息 key（見 migration 08 開頭說明） */

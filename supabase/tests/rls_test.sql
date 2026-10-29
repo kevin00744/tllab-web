@@ -803,3 +803,131 @@ begin
 exception when raise_exception then
   if sqlerrm <> 'rollback' then raise; end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 階段 6：Resources API（migration 13）
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪（member）
+do $$
+declare
+  v_slug text;
+  v_doc uuid;
+  v_ver int;
+  v_faq uuid;
+  v_sw uuid;
+  v_pl uuid;
+  v_ai uuid;
+  j jsonb;
+begin
+  -- Orientation
+  assert jsonb_array_length(list_documents()) = 3;
+  assert get_document('welcome') ->> 'content' like '# 歡迎加入%';
+  v_slug := save_document('{"title":"Python Environment","parent_id":"60000000-0000-0000-0000-000000000001"}');
+  assert v_slug = 'python-environment', v_slug;
+  v_slug := save_document('{"title":"顯微鏡操作"}');
+  assert v_slug ~ '^page-[0-9a-f]{6}$', '中文標題使用 page-xxxxxx';
+  begin perform save_document('{"title":"x","slug":"welcome"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'slugTaken'; end;
+  begin perform save_document('{"title":"x","slug":"Bad Slug"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'slugInvalid'; end;
+  begin perform save_document(get_document('welcome') || '{"parent_id":"60000000-0000-0000-0000-000000000002"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'invalidParent'; end;
+  v_doc := (get_document('python-environment') ->> 'id')::uuid;
+  v_ver := save_document_content(v_doc, E'# Python\n\n用 conda。', 0);
+  assert v_ver = 1;
+  begin perform save_document_content(v_doc, 'stale', 0); raise exception 'x';
+  exception when serialization_failure then assert sqlerrm = 'conflict'; end;
+  assert (get_document('python-environment') -> 'updated_by' ->> 'name') = '張家豪';
+  -- 只能刪自己建立的頁面
+  begin perform delete_document('60000000-0000-0000-0000-000000000003'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  assert not (get_document('welcome') ->> 'deletable')::boolean and (get_document('welcome') ->> 'editable')::boolean;
+  perform delete_document(v_doc);
+
+  -- FAQ
+  v_faq := save_faq('{"question":"印表機在哪？","answer":"R911 門口","category":"行政","tags":["設備"," 設備 "]}');
+  assert jsonb_array_length(list_faqs('{"q":"印表機"}')) = 1;
+  assert jsonb_array_length(list_faqs('{"q":"設備"}')) = 1, '可搜尋標籤';
+  assert (select tags from faqs where id = v_faq) = array['設備'];
+  assert exists (select 1 from jsonb_array_elements(faq_categories()) c where c ->> 'category' = '行政' and (c ->> 'count')::int = 2);
+  begin perform save_faq('{"question":" "}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'titleRequired'; end;
+  -- 協作 wiki：可以編輯別人的 FAQ，但不能刪除
+  perform save_faq('{"id":"70000000-0000-0000-0000-000000000001","question":"如何申請 NAS 帳號？","answer":"更新後的答案","category":"帳號與系統"}');
+  begin perform delete_faq('70000000-0000-0000-0000-000000000001'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  perform delete_faq(v_faq);
+
+  -- 軟體
+  v_sw := save_software('{"name":"Python","category":"程式語言","url":"javascript:alert(1)","docs_url":"https://docs.python.org"}');
+  j := get_software(v_sw);
+  assert j ->> 'url' is null and j ->> 'docs_url' = 'https://docs.python.org', '只接受 http(s) 網址';
+  assert jsonb_array_length(list_software('{"category":"程式語言"}')) = 2;
+
+  -- Pipelines：維護者以外不能修改
+  begin perform save_pipeline(get_pipeline('90000000-0000-0000-0000-000000000001') || '{"name":"改名"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  assert not (get_pipeline('90000000-0000-0000-0000-000000000001') ->> 'editable')::boolean;
+  v_pl := save_pipeline('{"name":"AO 校正","tags":["AO"],"steps":[{"title":"量測","code":"python measure.py","code_language":"Python"},{"title":"校正"}]}');
+  assert (get_pipeline(v_pl) -> 'steps' -> 0 ->> 'code_language') = 'python';
+  perform save_pipeline(get_pipeline(v_pl) || '{"steps":[{"title":"校正"},{"title":"量測"},{"title":"驗證"}]}');
+  assert (select string_agg(title, ',' order by step_order) from pipeline_steps where pipeline_id = v_pl) = '校正,量測,驗證';
+  begin perform save_pipeline(get_pipeline(v_pl) || '{"steps":[{"title":""}]}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'titleRequired'; end;
+  assert jsonb_array_length(list_pipelines('{"tag":"AO"}')) = 1;
+  perform delete_pipeline(v_pl);
+
+  -- 會議：出席者可編輯
+  j := get_meeting('40000000-0000-0000-0000-000000000001');
+  assert (j ->> 'editable')::boolean and jsonb_array_length(j -> 'action_items') = 2;
+  assert not (get_meeting('40000000-0000-0000-0000-000000000002') ->> 'editable')::boolean;
+  v_ver := save_meeting_summary('40000000-0000-0000-0000-000000000001', E'## 新紀錄', (j ->> 'summary_version')::int);
+  begin perform save_meeting_summary('40000000-0000-0000-0000-000000000001', 'stale', 0); raise exception 'x';
+  exception when serialization_failure then null; end;
+  begin perform save_meeting_summary('40000000-0000-0000-0000-000000000002', 'x', 0); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform save_meeting(get_meeting('40000000-0000-0000-0000-000000000002') || '{"title":"改"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  -- Action item：新增、勾選完成會同步已轉換的任務
+  v_ai := save_action_item('{"meeting_id":"40000000-0000-0000-0000-000000000001","content":"整理校正數據","assignee_id":"10000000-0000-0000-0000-000000000005"}');
+  assert (select position from action_items where id = v_ai) = 3;
+  perform save_action_item(jsonb_build_object('id', (select id from action_items where task_id = '50000000-0000-0000-0000-000000000001'),
+                                              'content', '完成 Nature Methods 審稿回覆初稿', 'is_done', true));
+  assert (select status from tasks where id = '50000000-0000-0000-0000-000000000001') = 'done', '同步任務狀態';
+  perform save_action_item(jsonb_build_object('id', (select id from action_items where task_id = '50000000-0000-0000-0000-000000000001'),
+                                              'content', '完成 Nature Methods 審稿回覆初稿', 'is_done', false));
+  assert (select status from tasks where id = '50000000-0000-0000-0000-000000000001') = 'todo';
+  perform convert_action_item_to_task(v_ai);
+  assert (get_meeting('40000000-0000-0000-0000-000000000001') -> 'action_items' -> 2 -> 'task' ->> 'title') = '整理校正數據';
+  perform delete_action_item(v_ai);
+  -- 新會議：建立者自動可編輯，出席者與專案
+  v_doc := save_meeting(jsonb_build_object('title', '小組討論', 'type', 'one_on_one',
+         'starts_at', '2026-11-03T06:00:00Z', 'ends_at', '2026-11-03T07:00:00Z',
+         'attendees', '[{"member_id":"10000000-0000-0000-0000-000000000001","is_presenter":false},{"member_id":"10000000-0000-0000-0000-000000000005","is_presenter":true}]'::jsonb,
+         'project_ids', '["20000000-0000-0000-0000-000000000001"]'::jsonb));
+  j := get_meeting(v_doc);  -- stable 函式看不到同一個 statement 內新增的資料，分開呼叫
+  assert jsonb_array_length(j -> 'attendees') = 2 and (j -> 'attendees' -> 0 ->> 'is_presenter')::boolean;
+  assert (j -> 'projects' -> 0 ->> 'id') = '20000000-0000-0000-0000-000000000001';
+  begin perform save_meeting('{"title":"x","starts_at":"2026-11-03T06:00:00Z","ends_at":"2026-11-03T05:00:00Z"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'dateOrder'; end;
+  begin perform save_meeting('{"title":"x"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'dateRequired'; end;
+  assert jsonb_array_length(list_meetings('{"type":"one_on_one","member_id":"10000000-0000-0000-0000-000000000005"}')) = 1;
+  assert jsonb_array_length(list_meetings('{"q":"新紀錄"}')) = 1, '可搜尋會議紀錄內文';
+  perform delete_meeting((j ->> 'id')::uuid);
+end $$;
+
+-- viewer：可讀不可寫
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000013';
+do $$
+begin
+  assert jsonb_array_length(list_faqs()) >= 5;
+  assert not (get_document('welcome') ->> 'editable')::boolean;
+  begin perform save_faq('{"question":"x"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform save_document_content('60000000-0000-0000-0000-000000000001', 'x', 0); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;

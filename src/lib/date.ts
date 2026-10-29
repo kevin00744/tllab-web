@@ -39,3 +39,13 @@ export function relativeDay(t: Dictionary, days: number, { overdue = false } = {
   if (days > 0) return format(t.relative.inDays, { n: days });
   return format(overdue ? t.relative.overdueDays : t.relative.daysAgo, { n: -days });
 }
+
+/** ISO 時間 → 台灣時間的 "HH:MM" */
+export function labTimeOf(iso: string) {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: LAB_TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+}
+
+/** 台灣日期＋時間（"2026-11-03"、"14:00"）→ ISO；台灣沒有日光節約時間，固定 +08:00 */
+export function labIso(date: string, time: string) {
+  return `${date}T${time || "00:00"}:00+08:00`;
+}

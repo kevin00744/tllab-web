@@ -163,3 +163,94 @@ export type InviteCode = {
   status: "active" | "used" | "expired" | "revoked";
   redeemed_by: string[];
 };
+
+// 對應 supabase/migrations/20261029000013_resources_api.sql
+type Permission = { editable: boolean; deletable: boolean };
+
+export type DocumentItem = Permission & {
+  id: string;
+  kind: "orientation" | "wiki";
+  parent_id: string | null;
+  slug: string;
+  title: string;
+  emoji: string;
+  sort_order: number;
+  updated_at: string;
+  updated_by: MemberBrief | null;
+};
+export type DocumentDetail = DocumentItem & { content: string; content_version: number };
+
+export type Faq = Permission & {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  tags: string[];
+  sort_order: number;
+  updated_at: string;
+};
+
+export type SoftwareTool = Permission & {
+  id: string;
+  name: string;
+  emoji: string;
+  category: string;
+  purpose: string | null;
+  access_info: string | null;
+  install_guide: string | null;
+  url: string | null;
+  docs_url: string | null;
+  contact: MemberBrief | null;
+  updated_at: string;
+};
+
+export type PipelineStep = { id?: string; title: string; description: string | null; code: string | null; code_language: string | null };
+export type Pipeline = Permission & {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string | null;
+  inputs: string | null;
+  outputs: string | null;
+  version: string;
+  repo_url: string | null;
+  tags: string[];
+  maintainer: MemberBrief | null;
+  project: (Ref & { emoji: string }) | null;
+  step_count: number;
+  updated_at: string;
+};
+export type PipelineDetail = Pipeline & { steps: PipelineStep[] };
+
+export type MeetingAttendee = MemberBrief & { is_presenter: boolean };
+export type Meeting = Permission & {
+  id: string;
+  title: string;
+  emoji: string;
+  type: MeetingType;
+  starts_at: string;
+  ends_at: string | null;
+  location: string | null;
+  attendees: MeetingAttendee[];
+  projects: (Ref & { emoji: string })[];
+  action_total: number;
+  action_open: number;
+  has_notes: boolean;
+};
+export type ActionItem = {
+  id: string;
+  content: string;
+  due_date: string | null;
+  is_done: boolean;
+  position: number;
+  assignee: MemberBrief | null;
+  task: { id: string; title: string; status: TaskStatus } | null;
+  overdue: boolean;
+  editable: boolean;
+};
+export type MeetingDetail = Meeting & {
+  summary: string;
+  summary_version: number;
+  decisions: string | null;
+  action_items: ActionItem[];
+};

@@ -15,6 +15,7 @@
 | `20261029000009_project_files.sql` | 專案頁面本文（Markdown，含版本號偵測同時編輯）、進度報告簡報附件、活動紀錄合併與截短 |
 | `20261029000010_members_api.sql` | 成員列表／個人頁／編輯／刪除 API、邀請碼列表與撤銷（階段 5） |
 | `20261029000011_system_admin.sql` | 系統管理員 `members.is_system_admin`（預設給 PI）：管理員的身分只有系統管理員能變更 |
+| `20261029000013_resources_api.sql` | Resources API（階段 6）：文件、FAQ、軟體、Pipelines、會議與 Action items；`documents.content_version`、`meetings.summary_version` |
 | `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
@@ -182,6 +183,14 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `member_user_id(id)` | 成員的登入帳號 id（Admin 重設密碼用；其他管理員的只有系統管理員能取得） |
 | `is_system_admin()` | 目前使用者是否為系統管理員；`member_json` 另回傳 `is_system_admin` 與 `manageable`（能否變更此成員的身分） |
 | `list_invite_codes()` / `revoke_invite_code(id)` | 邀請碼列表（狀態 active／used／expired／revoked、已使用者 Email）與撤銷（僅 Admin） |
+| `list_documents(kind)` / `get_document(slug)` | Orientation 目錄（不含內文）與單頁（含內文、版本號、更新者） |
+| `save_document(p)` / `save_document_content(id, content, version)` / `delete_document(id)` | 頁面資訊（網址代稱空白時自動產生，英數標題轉 `a-b-c`、其他用 `page-xxxxxx`；上層不能是自己或子頁面）；內文自動儲存，版本不符回 40001 |
+| `list_faqs(filter)` / `faq_categories()` / `save_faq(p)` / `delete_faq(id)` | FAQ（篩選 `category`、`q` 比對問題／回答／標籤） |
+| `list_software(filter)` / `get_software(id)` / `save_software(p)` / `delete_software(id)` | 軟體與工具；網址只接受 `http(s)://` |
+| `list_pipelines(filter)` / `get_pipeline(id)` / `save_pipeline(p)` / `delete_pipeline(id)` | Pipelines（篩選 `tag`、`q`）；`steps` 以傳入陣列為準重新編號 |
+| `list_meetings(filter)` / `get_meeting(id)` / `save_meeting(p)` / `delete_meeting(id)` | 會議（篩選 `type`、`member_id`、`project_id`、`q` 含紀錄內文）；出席者 `[{member_id, is_presenter}]`、相關專案 |
+| `save_meeting_summary(id, content, version)` | 會議紀錄即時編輯；版本不符回 40001 |
+| `save_action_item(p)` / `delete_action_item(id)` | Action item 新增／更新；已轉為任務時，勾選完成會同步任務狀態（有權限時） |
 | `create_invite_code(...)` | 產生邀請碼（Admin），回傳原文一次 |
 | `claim_invite_code` / `release_invite_code` / `complete_invite_signup` | 邀請碼註冊流程（僅 service_role） |
 
