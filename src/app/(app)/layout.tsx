@@ -2,13 +2,16 @@ import { AppShell } from "@/components/layout/app-shell";
 import type { SidebarGroup } from "@/components/layout/sidebar-nav";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/(auth)/actions";
-import { getCurrentMember } from "@/lib/auth";
+import Link from "next/link";
+import { TriangleAlertIcon } from "lucide-react";
+
+import { getCurrentMember, mustChangePassword } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
 import { navGroups } from "@/lib/nav";
 import { getPageMetas } from "@/lib/pages";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ locale, t }, member] = await Promise.all([getI18n(), getCurrentMember()]);
+  const [{ locale, t }, member, changePassword] = await Promise.all([getI18n(), getCurrentMember(), mustChangePassword()]);
 
   // 已登入但沒有成員資料（例如成員被刪除）：看不到任何內容
   if (!member) {
@@ -35,6 +38,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell groups={groups} member={member}>
+      {changePassword ? (
+        <div role="alert" className="mb-6 flex flex-wrap items-center gap-2 rounded-lg bg-status-amber-bg px-4 py-3 text-sm text-status-amber-fg">
+          <TriangleAlertIcon className="size-4" />
+          <span className="flex-1">{t.membersPage.mustChangePassword}</span>
+          <Link href="/account" className="font-medium underline underline-offset-2">
+            {t.membersPage.goChange}
+          </Link>
+        </div>
+      ) : null}
       {children}
     </AppShell>
   );

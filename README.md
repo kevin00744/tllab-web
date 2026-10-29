@@ -15,14 +15,14 @@ TL Lab（Lab 911）內部使用的網頁系統，取代原本 Notion 上的實�
 | 1 | 資料庫 schema 與資料表關聯 | ✅ |
 | 2 | 版面架構（側邊欄 + 路由）與登入 | ✅ |
 | 3 | Dashboard 首頁 | ✅ |
-| 4 | Projects、Tasks、Publication Tracker | ✅ 待確認 |
-| 5 | Team Members | ⏳ |
+| 4 | Projects、Tasks、Publication Tracker | ✅ |
+| 5 | Team Members（含邀請碼管理、重設密碼） | ✅ 待確認 |
 | 6 | Resources 各子頁面 | ⏳ |
 | 7 | 全站搜尋、權限、活動紀錄、深色模式 | ⏳ |
 | 8 | 從 Notion 匯入資料（CSV／Markdown） | ⏳ |
 | 9 | 共同編輯行事曆、個人化 Dashboard（依個人資料決定顯示哪些區塊） | ⏳ |
 
-> 目前完成到階段 4：登入／邀請碼註冊、側邊欄、中英文、深淺色、Dashboard，以及專案（表格／看板／甘特圖／詳細頁）、任務（可拖拉看板／清單／月曆，篩選我的／逾期／專案／成員）、論文追蹤（看板／表格／年度統計圖，作者可連結成員）。專案頁面另有類 Notion 的 Markdown 本文（點擊即編輯、自動儲存）與進度報告簡報上傳（PPT/PPTX 自動轉 PDF，網頁內逐頁預覽）。
+> 目前完成到階段 5：登入／邀請碼註冊、側邊欄、中英文、深淺色、Dashboard，以及專案（表格／看板／甘特圖／詳細頁）、任務（可拖拉看板／清單／月曆，篩選我的／逾期／專案／成員）、論文追蹤（看板／表格／年度統計圖，作者可連結成員）。專案頁面另有類 Notion 的 Markdown 本文（點擊即編輯、自動儲存）與進度報告簡報上傳（PPT/PPTX 自動轉 PDF，網頁內逐頁預覽）。成員頁有卡片／表格檢視、職稱篩選、校友分區與個人頁（照片、研究方向、Markdown 簡介、連結、參與專案、論文、進行中任務）；Admin 可在網頁上新增／刪除成員、調整權限、管理邀請碼、重設密碼。
 
 ## 專案結構
 
@@ -274,9 +274,9 @@ update public.members set app_role = 'admin' where lower(email) = lower('<你的
 
 ### 6-4 產生邀請碼
 
-在網頁的管理介面完成前（階段 7），先在 SQL Editor 產生。**邀請碼原文只會顯示這一次，請立即複製給對方。**
+**網頁操作（建議）**：Admin 到「成員」→「邀請碼管理」（`/members/invites`）按「產生邀請碼」，可設定權限、預設職稱、限定 Email、綁定既有成員、可用次數與有效天數；列表會顯示使用狀況，也能直接撤銷。尚未註冊的成員，在其個人頁的管理區按「產生邀請碼」即可產生綁定該成員的一次性邀請碼。**邀請碼原文只會顯示這一次，請立即複製給對方。**
 
-一般成員，單次使用，14 天內有效：
+也可以在 SQL Editor 產生（例如還沒有任何 Admin 帳號時）。一般成員，單次使用，14 天內有效：
 
 ```sql
 select public.create_invite_code();
@@ -323,13 +323,14 @@ select code_hint, note, app_role, position, email, used_count, max_uses, expires
 update public.invite_codes set revoked_at = now() where code_hint = '<末 4 碼>';
 ```
 
-成員拿到邀請碼後，在網頁的「註冊」頁輸入邀請碼、Email、密碼即可。註冊頁在階段 2 完成。
+成員拿到邀請碼後，在登入頁點「用邀請碼註冊」，輸入邀請碼、姓名、Email、密碼即可。
 
 ### 6-5 忘記密碼
 
 因為沒有設定寄信，「忘記密碼」由 Admin 協助重設：
-- 階段 7 會在成員管理頁加上「重設密碼」按鈕。
-- 在那之前，可以在 SQL Editor 設定一組臨時密碼，再請成員登入後自行修改：
+- Admin 到該成員的個人頁，在「管理（僅 Admin）」區按「重設密碼」，系統會產生一組 12 碼臨時密碼（只顯示一次）。
+- 成員用臨時密碼登入後，頁面頂端會提示到「帳號設定」變更密碼，變更後提示消失。
+- 備用方式：在 SQL Editor 設定一組臨時密碼，再請成員登入後自行修改：
 
 ```sql
 update auth.users set encrypted_password = extensions.crypt('<臨時密碼>', extensions.gen_salt('bf'))
@@ -501,7 +502,8 @@ DATABASE_URL='<新專案的連線字串>' scripts/db-restore.sh /opt/tllab/backu
 | `password authentication failed` | 連線字串的密碼不對；密碼有特殊字元時要做 URL 編碼（例如 `@` → `%40`），或到 Database Settings 重設成只有英數字的密碼 |
 | 網站打不開，Dashboard 顯示 Paused | 免費專案 7 天沒有使用被暫停，在 Dashboard 按 Restore |
 | 註冊時顯示「邀請碼無效、已過期或已使用完畢」 | 在 SQL Editor 查詢 `invite_codes` 的 `used_count`、`expires_at`、`revoked_at`；必要時重新產生 |
-| 成員忘記密碼 | 見步驟 6-5 |
+| 成員忘記密碼 | 見步驟 6-5（成員個人頁的「重設密碼」） |
+| 刪除成員 | 成員個人頁 →「刪除成員」，登入帳號會一併刪除；任務指派與專案成員關聯會移除、負責人欄位改為空白，論文作者保留姓名。不能刪除自己，系統至少保留一位 Admin |
 | 登入後跳到 `localhost:3000` | Supabase 的 Site URL／Redirect URLs 沒改成正式網址（步驟 6-1） |
 | 簡報上傳後顯示「無法產生預覽」 | 確認容器內有 LibreOffice：`docker compose exec web soffice --version`；查看 `docker compose logs web` 中的 `slide conversion failed` 訊息。PDF 檔不需轉換 |
 | 編譯時出現 `Killed` | RAM 不足，加 swap（步驟 1）或在別台電腦編譯 |

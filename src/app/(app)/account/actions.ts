@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { getCurrentMember } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -31,9 +33,15 @@ export async function changePassword(_prev: PasswordFormState, formData: FormDat
   });
   if (verifyError) return { error: "wrongCurrentPassword" };
 
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+    data: { must_change_password: false },
+  });
   if (error) {
     return error.code === "weak_password" ? { fields: { password: "passwordWeak" } } : { error: "server" };
   }
+  // 重新取得 token，讓「請變更臨時密碼」提醒立即消失
+  await supabase.auth.refreshSession();
+  revalidatePath("/", "layout");
   return { ok: true };
 }

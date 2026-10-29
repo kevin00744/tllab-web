@@ -28,7 +28,7 @@ export function ViewTabs({
           scroll={false}
           aria-current={v.value === current ? "page" : undefined}
           className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground [&_svg]:size-4",
+            "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-sm whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground [&_svg]:size-4",
             v.value === current && "bg-background font-medium text-foreground shadow-xs",
           )}
         >

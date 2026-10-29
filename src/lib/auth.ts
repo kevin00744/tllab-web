@@ -22,3 +22,11 @@ export const getCurrentMember = cache(async (): Promise<Member | null> => {
 export function canEdit(member: Pick<Member, "app_role"> | null) {
   return member?.app_role === "admin" || member?.app_role === "member";
 }
+
+/** Admin 重設密碼後設定的旗標：登入後提醒使用者變更臨時密碼 */
+export const mustChangePassword = cache(async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const meta = data?.claims?.user_metadata as { must_change_password?: boolean } | undefined;
+  return meta?.must_change_password === true;
+});

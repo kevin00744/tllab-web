@@ -13,6 +13,7 @@
 | `20261029000007_dashboard.sql` | `get_dashboard()`：Dashboard 所需資料一次取回 |
 | `20261029000008_projects_tasks_publications_api.sql` | 專案／任務／論文的讀寫函式（網頁一律經由這些函式存取，權限仍由 RLS 決定） |
 | `20261029000009_project_files.sql` | 專案頁面本文（Markdown，含版本號偵測同時編輯）、進度報告簡報附件、活動紀錄合併與截短 |
+| `20261029000010_members_api.sql` | 成員列表／個人頁／編輯／刪除 API、邀請碼列表與撤銷（階段 5） |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -172,6 +173,11 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `publication_year_stats()` | 各年度已發表數（依類型）與投稿數 |
 | `save_project_content(id, content, version)` | 專案頁面自動儲存；版本不符回 40001（他人已先儲存），不會覆蓋 |
 | `list_attachments(entity_type, entity_id)` | 附件列表（上傳者、是否可刪除、PDF 預覽路徑） |
+| `list_members(filter)` / `get_member(id)` | 成員列表（篩選 `position`、`alumni`、`q` 比對姓名／Email／研究方向；含參與專案、是否已註冊、`editable`）；個人頁另含論文與未完成任務 |
+| `save_member(p)` | 新增（僅 Admin）或更新成員；本人只能改個人資料，職稱／權限／Email／校友／排序由 Admin 修改（一般成員送來的值會被忽略）；連結只保留 `http(s)://` 網址 |
+| `delete_member(id)` | 刪除成員（僅 Admin、不能刪自己），回傳原本的登入帳號 id，讓伺服器一併刪除帳號 |
+| `member_user_id(id)` | 成員的登入帳號 id（Admin 重設密碼用） |
+| `list_invite_codes()` / `revoke_invite_code(id)` | 邀請碼列表（狀態 active／used／expired／revoked、已使用者 Email）與撤銷（僅 Admin） |
 | `create_invite_code(...)` | 產生邀請碼（Admin），回傳原文一次 |
 | `claim_invite_code` / `release_invite_code` / `complete_invite_signup` | 邀請碼註冊流程（僅 service_role） |
 

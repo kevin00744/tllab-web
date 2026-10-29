@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { MemberAvatar } from "@/components/layout/user-menu";
@@ -25,7 +26,11 @@ export default async function AccountPage() {
         <Card>
           <CardHeader>
             <CardTitle>{t.account.profile}</CardTitle>
-            <CardDescription>{t.account.profileHint}</CardDescription>
+            <CardDescription>
+              <Link href={`/members/${member.id}`} className="text-primary hover:underline">
+                {t.membersPage.edit} →
+              </Link>
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-4">
             <MemberAvatar member={member} className="size-12 text-base" />

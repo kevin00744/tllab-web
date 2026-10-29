@@ -1,4 +1,4 @@
-import type { MemberPosition, ProjectStatus, PublicationStage, TaskPriority, TaskStatus } from "./db";
+import type { AppRole, MemberPosition, ProjectStatus, PublicationStage, TaskPriority, TaskStatus } from "./db";
 import type { MeetingType } from "./dashboard";
 
 // 對應 supabase/migrations/20261029000008_projects_tasks_publications_api.sql 的 JSON 結構
@@ -117,4 +117,46 @@ export type FormOptions = {
   projects: (Ref & { status: ProjectStatus })[];
   publications: (Ref & { stage: PublicationStage })[];
   can_create: boolean;
+};
+
+export type MemberProfile = {
+  id: string;
+  name: string;
+  name_en: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  position: MemberPosition;
+  app_role: AppRole;
+  is_alumni: boolean;
+  research_interests: string[];
+  bio: string | null;
+  join_year: number | null;
+  left_year: number | null;
+  current_affiliation: string | null;
+  links: { label: string; url: string }[];
+  sort_order: number;
+  has_account: boolean;
+  projects: (Ref & { emoji: string; status: ProjectStatus; is_owner: boolean })[];
+  editable: boolean;
+  is_me: boolean;
+};
+
+export type MemberDetail = MemberProfile & { publications: Publication[]; tasks: Task[] };
+
+export type InviteCode = {
+  id: string;
+  code_hint: string;
+  note: string | null;
+  app_role: AppRole;
+  position: MemberPosition | null;
+  email: string | null;
+  member: MemberBrief | null;
+  max_uses: number;
+  used_count: number;
+  expires_at: string;
+  revoked_at: string | null;
+  created_at: string;
+  created_by: MemberBrief | null;
+  status: "active" | "used" | "expired" | "revoked";
+  redeemed_by: string[];
 };

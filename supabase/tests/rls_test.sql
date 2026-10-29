@@ -602,3 +602,79 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- ---------------------------------------------------------------------------
+-- 階段 5：成員與邀請碼管理
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪（member）
+do $$
+declare j jsonb;
+begin
+  j := list_members();
+  assert (j -> 0 ->> 'position') = 'pi', '依職稱排序，PI 在最前';
+  assert not (j -> -1 ->> 'is_alumni') = 'false', '校友排在最後';
+  assert jsonb_array_length(list_members('{"alumni":true}')) = 3;
+  assert jsonb_array_length(list_members('{"position":"phd","alumni":false}')) >= 1;
+  assert jsonb_array_length(list_members('{"q":"影像"}')) >= 1, '依研究方向搜尋';
+  j := get_member('10000000-0000-0000-0000-000000000005');
+  assert (j ->> 'is_me')::boolean and (j ->> 'editable')::boolean;
+  assert exists (select 1 from jsonb_array_elements(j -> 'projects') p where (p ->> 'is_owner')::boolean), '負責專案';
+  assert jsonb_array_length(j -> 'publications') >= 2 and jsonb_array_length(j -> 'tasks') >= 1;
+  assert not (get_member('10000000-0000-0000-0000-000000000003') ->> 'editable')::boolean, '不可編輯他人';
+
+  -- 本人修改個人資料：職稱／權限被忽略
+  perform save_member(jsonb_build_object('id', '10000000-0000-0000-0000-000000000005', 'name', '張家豪',
+    'name_en', 'Chia-Hao Chang', 'research_interests', jsonb_build_array('自適應光學', ' 光學設計 ', ''),
+    'links', jsonb_build_array(jsonb_build_object('label', 'GitHub', 'url', 'https://github.com/x'),
+                               jsonb_build_object('label', 'bad', 'url', 'javascript:alert(1)')),
+    'position', 'pi', 'app_role', 'admin', 'avatar_url', 'https://x/a.webp'));
+  assert (select position from members where id = '10000000-0000-0000-0000-000000000005') = 'phd', '本人不可改職稱';
+  assert (select app_role from members where id = '10000000-0000-0000-0000-000000000005') = 'member', '本人不可改權限';
+  assert (select research_interests from members where id = '10000000-0000-0000-0000-000000000005') = array['光學設計', '自適應光學'];
+  assert jsonb_array_length((select links from members where id = '10000000-0000-0000-0000-000000000005')) = 1, '過濾非 http 連結';
+  assert (select avatar_url from members where id = '10000000-0000-0000-0000-000000000005') = 'https://x/a.webp';
+  -- 不可改他人、不可新增、不可刪除、不可查帳號
+  begin perform save_member('{"id":"10000000-0000-0000-0000-000000000003","name":"x"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform save_member('{"name":"新人"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform delete_member('10000000-0000-0000-0000-000000000003'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform member_user_id('10000000-0000-0000-0000-000000000005'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  assert jsonb_array_length(list_invite_codes()) = 0, '非 Admin 看不到邀請碼';
+end $$;
+
+-- Admin（PI）
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+do $$
+declare
+  v uuid;
+  j jsonb;
+begin
+  v := save_member('{"name":"新博士生","email":"New.PhD@Example.com","position":"phd","app_role":"member","join_year":"2026"}');
+  assert (select email from members where id = v) = 'new.phd@example.com';
+  begin perform save_member('{"name":"重複","email":"new.phd@example.com"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'emailTaken'; end;
+  begin perform save_member('{"name":" "}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'nameRequired'; end;
+  -- 設為校友、改權限
+  perform save_member(jsonb_build_object('id', v, 'name', '新博士生', 'email', 'new.phd@example.com',
+                      'position', 'phd', 'app_role', 'viewer', 'is_alumni', true, 'left_year', '2027'));
+  assert (select is_alumni and app_role = 'viewer' from members where id = v);
+  assert member_user_id('10000000-0000-0000-0000-000000000005') = 'aaaaaaaa-0000-0000-0000-000000000005';
+  -- 邀請碼列表與撤銷
+  perform create_invite_code(p_member_id => v, p_note => '測試');
+  j := list_invite_codes();
+  assert exists (select 1 from jsonb_array_elements(j) x where x ->> 'note' = '測試' and x ->> 'status' = 'active'
+                   and x -> 'member' ->> 'name' = '新博士生');
+  perform revoke_invite_code((select (x ->> 'id')::uuid from jsonb_array_elements(j) x where x ->> 'note' = '測試'));
+  assert exists (select 1 from jsonb_array_elements(list_invite_codes()) x where x ->> 'note' = '測試' and x ->> 'status' = 'revoked');
+  -- 刪除
+  assert delete_member(v) is null, '未綁定帳號回傳 null';
+  begin perform delete_member('10000000-0000-0000-0000-000000000001'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'cannotDeleteSelf'; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
