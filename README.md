@@ -82,10 +82,14 @@ Schema、ER 圖與權限說明見 [docs/database-schema.md](docs/database-schema
 
 在這個架構下，Google 登入的 redirect URI 是 Supabase 的網址（`https://<ref>.supabase.co/auth/v1/callback`），所以**主機沒有公開網域也能用 Google 登入**。登入後瀏覽器會跳回網頁網址，只要你的電腦連得到主機就行，內網 IP 也可以。
 
-| 情境 | 網頁網址 | HTTPS |
-|---|---|---|
-| 有系所網域（建議） | `https://hub.<系所網域>` | 用 certbot 申請 Let's Encrypt 憑證（步驟 9） |
-| 只在校內網路使用 | `http://<主機 IP>` | 可以不用；登入 cookie 在 http 下也能運作，但建議只在可信任的內網這樣做 |
+| 情境 | 網頁網址 | 費用 | 條件 |
+|---|---|---|---|
+| 只在實驗室／校內使用 | `http://<主機 IP>` | 免費 | 使用者要在同一個網路（或學校 VPN）內；不需要 HTTPS |
+| 系所或計中核發的子網域（最建議） | `https://hub.<系所網域>` | 免費 | 向系上或計中申請 DNS 紀錄；憑證用 certbot（步驟 9） |
+| Tailscale Funnel | `https://<主機名>.<tailnet>.ts.net` | 免費 | **不需要開放對外連接埠**，校外也能連，HTTPS 自動處理（見〈附錄：免費網址〉） |
+| DuckDNS 等免費 DDNS | `https://<名稱>.duckdns.org` | 免費 | 主機要有公開 IP，且學校防火牆允許校外連入 80/443 |
+
+建議先用 `http://<主機 IP>` 完成開發與測試，之後再換成正式網址。要換網址時，只需改 Supabase 的 URL Configuration 和 `.env` 的 `NEXT_PUBLIC_SITE_URL`，再重新編譯網頁；Google 那邊不用改。
 
 以下範例使用 `hub.example.edu.tw`，請換成你的網域或 `http://<主機 IP>`。
 
@@ -383,10 +387,57 @@ DATABASE_URL='<新專案的連線字串>' scripts/db-restore.sh /opt/tllab/backu
    - 學校有 Google Workspace，而且只給校內帳號登入：User type 選 **Internal**。
    - 否則選 **External**，填好應用程式名稱與聯絡信箱後按 **Publish app**；不發布的話，只有列為測試使用者的帳號能登入。
 2. **Credentials → Create credentials → OAuth client ID**，Application type 選 **Web application**：
-   - Authorized JavaScript origins：`https://hub.example.edu.tw`
+   - Authorized JavaScript origins：可以不填。Google 不接受內網 IP，而登入流程也用不到這個欄位。
    - Authorized redirect URIs：`https://<ref>.supabase.co/auth/v1/callback`
      （Supabase Dashboard → Authentication → Providers → Google 頁面上可直接複製這個網址）
 3. 把產生的 Client ID 與 Client Secret 填回 Supabase 的 Google provider（步驟 6-2）。
+
+## 附錄：免費網址
+
+先在主機上確認是否有公開 IP：
+
+```bash
+hostname -I; curl -s https://ifconfig.me; echo
+```
+
+兩個指令印出相同的 IP 時，主機就有公開 IP，可以考慮 DuckDNS。不同的話（例如 `192.168.x.x` 與另一個 IP），主機在 NAT 後面，請用 Tailscale Funnel。
+
+### Tailscale Funnel（不需開放連接埠）
+
+1. 到 <https://tailscale.com> 用實驗室 Google 帳號註冊（個人方案免費）。
+2. 到管理頁面 **DNS** 啟用 MagicDNS 與 HTTPS Certificates。
+3. 在主機上安裝並登入。安裝程式支援 Ubuntu 18.04，`tailscale up` 會印出一個網址，用瀏覽器開啟並登入：
+
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   ```
+
+   ```bash
+   sudo tailscale up
+   ```
+
+4. 把 Nginx（80 port）公開成 HTTPS 網址。第一次執行時，如果提示要到管理頁面允許 Funnel，照著網址開啟即可：
+
+   ```bash
+   sudo tailscale funnel --bg 80
+   ```
+
+   ```bash
+   tailscale funnel status
+   ```
+
+5. `tailscale funnel status` 會顯示網址，例如 `https://tllab-1112.<tailnet>.ts.net`。把它填到 Supabase 的 Site URL 與 Redirect URLs，以及 `.env` 的 `NEXT_PUBLIC_SITE_URL`。這個方式**不需要 certbot**。
+
+### DuckDNS（需要公開 IP）
+
+1. 到 <https://www.duckdns.org> 用 Google 帳號登入，建立子網域（例如 `tllab911.duckdns.org`），記下 token。
+2. 每 5 分鐘更新一次 IP：用 `crontab -e` 加入下面這行。
+
+   ```
+   */5 * * * * curl -s "https://www.duckdns.org/update?domains=tllab911&token=<token>&ip=" > /dev/null
+   ```
+
+3. 確認校外連得到主機的 80/443 port 後，依步驟 9 用 certbot 申請憑證（`-d tllab911.duckdns.org`）。
 
 ## 開發者：本機測試 schema
 
