@@ -12,7 +12,7 @@ import { SearchDialog } from "@/components/search/search-dialog";
 import { LanguageToggle } from "./language-toggle";
 import { SidebarNav, type SidebarGroup } from "./sidebar-nav";
 import { ThemeToggle } from "./theme-toggle";
-import { UserMenu } from "./user-menu";
+import { GuestSignIn, UserMenu } from "./user-menu";
 
 function Brand() {
   const { t } = useI18n();
@@ -29,7 +29,7 @@ function Brand() {
   );
 }
 
-function SidebarBody({ groups, member, onNavigate }: { groups: SidebarGroup[]; member: Member; onNavigate?: () => void }) {
+function SidebarBody({ groups, member, onNavigate }: { groups: SidebarGroup[]; member: Member | null; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <Brand />
@@ -37,7 +37,7 @@ function SidebarBody({ groups, member, onNavigate }: { groups: SidebarGroup[]; m
         <SidebarNav groups={groups} onNavigate={onNavigate} />
       </div>
       <div className="border-t border-sidebar-border p-2">
-        <UserMenu member={member} />
+        {member ? <UserMenu member={member} /> : <GuestSignIn />}
       </div>
     </div>
   );
@@ -49,7 +49,7 @@ export function AppShell({
   children,
 }: {
   groups: SidebarGroup[];
-  member: Member;
+  member: Member | null;
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
@@ -86,6 +86,7 @@ export function AppShell({
           <div className="ml-auto flex items-center gap-1">
             <LanguageToggle />
             <ThemeToggle />
+            {member ? null : <GuestSignIn compact />}
           </div>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>

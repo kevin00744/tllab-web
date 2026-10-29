@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsUpDownIcon, LogOutIcon, SettingsIcon, UserCogIcon } from "lucide-react";
+import { ChevronsUpDownIcon, LogInIcon, LogOutIcon, SettingsIcon, UserCogIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { signOut } from "@/app/(auth)/actions";
 import { useI18n } from "@/lib/i18n/client";
@@ -9,6 +10,7 @@ import { roleLabel, roleTone } from "@/lib/status";
 import type { Member } from "@/types/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,5 +68,31 @@ export function UserMenu({ member }: { member: Member }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/** 訪客：登入按鈕（登入後回到目前頁面） */
+export function GuestSignIn({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n();
+  const pathname = usePathname();
+  const href = pathname === "/" ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
+  if (compact) {
+    return (
+      <Button asChild size="sm" className="ml-1">
+        <Link href={href} data-testid="guest-sign-in">
+          <LogInIcon /> {t.guest.signIn}
+        </Link>
+      </Button>
+    );
+  }
+  return (
+    <div className="grid gap-2 px-2 py-1.5">
+      <span className="text-xs text-muted-foreground">{t.guest.role}</span>
+      <Button asChild size="sm" variant="outline">
+        <Link href={href}>
+          <LogInIcon /> {t.guest.signIn}
+        </Link>
+      </Button>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ActivitySelect } from "@/components/activity/activity-bulk";
 import { MemberAvatar } from "@/components/layout/user-menu";
 import { daysFrom, formatDateTime, labDateOf, labTimeOf, relativeDay } from "@/lib/date";
 import type { Dictionary } from "@/lib/i18n";
@@ -68,6 +69,7 @@ export function ActivityItem({ entry, t, locale }: { entry: ActivityEntry; t: Di
   const title = entry.entity_title ? format(t.activity.quoted, { title: plainExcerpt(entry.entity_title, 60) }) : "";
   return (
     <li className="flex gap-3 py-2.5" data-activity-id={entry.id}>
+      <ActivitySelect id={entry.id} />
       {entry.actor ? <MemberAvatar member={entry.actor} className="size-7" /> : <span className="size-7 shrink-0 rounded-full bg-muted" aria-hidden />}
       <div className="min-w-0 flex-1 text-sm">
         <p>

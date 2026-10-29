@@ -15,6 +15,7 @@ import { PublicationsTable } from "@/components/publications/publication-views";
 import { NewTaskButton, TaskProvider } from "@/components/tasks/task-provider";
 import { TasksList } from "@/components/tasks/tasks-list";
 import { Badge } from "@/components/ui/badge";
+import { getUserId } from "@/lib/auth";
 import { getFormOptions, getProject, isUuid } from "@/lib/data";
 import { formatDate, formatDateTime, labDateOf } from "@/lib/date";
 import { format } from "@/lib/i18n";
@@ -39,7 +40,7 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
 export default async function ProjectDetailPage({ params }: PageProps<"/projects/[id]">) {
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const [{ locale, t }, options, project] = await Promise.all([getI18n(), getFormOptions(), getProject(id)]);
+  const [{ locale, t }, options, project, signedIn] = await Promise.all([getI18n(), getFormOptions(), getProject(id), getUserId()]);
   if (!project) notFound();
   const today = labDateOf(new Date().toISOString());
 
@@ -104,7 +105,8 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
         </div>
       </div>
 
-      <ProjectFiles projectId={project.id} files={project.files} editable={project.editable} />
+      {/* 附件（進度報告投影片等）只給登入成員 */}
+      {signedIn ? <ProjectFiles projectId={project.id} files={project.files} editable={project.editable} /> : null}
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">

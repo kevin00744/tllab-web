@@ -47,6 +47,14 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
+// 未登入（訪客）看不到的頁面；proxy 會把這些路徑導向登入頁
+export const GUEST_HIDDEN: PageKey[] = ["calendar", "meetings"];
+export const PRIVATE_PATHS = ["/calendar", "/meetings", "/settings", "/account", "/members/invites"];
+
+export function isPrivatePath(pathname: string) {
+  return PRIVATE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }

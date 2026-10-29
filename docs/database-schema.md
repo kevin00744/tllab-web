@@ -20,6 +20,7 @@
 | `20261029000015_search_activity_settings.sql` | 全站搜尋回傳 `link_key`（文件網址代稱）並搜尋會議地點、Action items、FAQ／Pipeline 標籤；活動紀錄 API；頁面設定 API（階段 7） |
 | `20261029000016_notion_import.sql` | Notion 匯入 `import_notion(p)`、`/notion/<id>` 連結 `resolve_notion(id)`；修正網址代稱截斷後以連字號結尾（階段 8） |
 | `20261029000017_calendar_dashboard.sql` | 共用行事曆 `calendar_events`／`calendar_event_members`、`list_calendar`、個人 Dashboard 設定 `member_preferences`；`get_dashboard` 加入專案 `mine`、未來 7 天行事曆與個人設定（階段 9） |
+| `20261029000018_public_access.sql` | 未登入（`anon`）唯讀：公開資料表的 `*_public` policy、成員只開放公開欄位並以 `member_card()` 遮蔽 email／帳號資訊、明列 anon 可執行的讀取函式、移除 anon 的寫入權限；活動紀錄批量刪除 `delete_activity`（系統管理員）（階段 10） |
 | `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
@@ -146,7 +147,7 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 
 | 動作 | Admin | Member | Viewer | 未登入 |
 |---|---|---|---|---|
-| 讀取所有資料 | ✅ | ✅ | ✅ | ❌ |
+| 讀取所有資料 | ✅ | ✅ | ✅ | 部分（見下方） |
 | 新增專案／任務／論文／會議／文件 | ✅ | ✅（`created_by` 必須是自己） | ❌ | ❌ |
 | 編輯專案 | ✅ | 負責人、參與成員、建立者 | ❌ | ❌ |
 | 編輯任務 | ✅ | 建立者、被指派者、可編輯該專案者 | ❌ | ❌ |
@@ -159,6 +160,9 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | 刪除管理員、重設管理員密碼 | 僅系統管理員 | ❌ | ❌ | ❌ |
 | 修改頁面 emoji 設定 | ✅ | ❌ | ❌ | ❌ |
 | 產生／查看／撤銷邀請碼 | ✅ | ❌ | ❌ | ❌ |
+| 批量刪除活動紀錄 | 僅系統管理員 | ❌ | ❌ | ❌ |
+
+**未登入（`anon`，migration 18）**：可讀成員（僅公開欄位：姓名、職稱、研究方向、簡介、連結、入學／離開年份等，不含 `email`、`user_id`、`app_role`、`is_system_admin`）、專案與參與成員、任務與指派、已發表論文與其作者、Orientation 文件、FAQ、軟體工具、Pipelines 與步驟、頁面設定，以及上述資料的活動紀錄。不可讀：會議（含出席者、Action items）、行事曆活動、未發表論文、附件、邀請碼、個人設定。所有資料表都撤銷 anon 的 insert／update／delete；可執行的函式明確列在 migration 18，寫入函式與伺服器端函式維持不開放。`member_card(id)`（security definer）是成員資料的唯一出口：未登入時把 `email`、`has_account`、`app_role`、`is_system_admin` 遮蔽；`list_members` 與 `search_all` 不再以成員 email 搜尋（否則可用來猜測 email）。
 
 另有保護：系統至少保留一位 Admin 與一位系統管理員（`members_protect_admin` trigger；不再是 Admin 或成為校友時自動取消系統管理員；只有系統管理員能指定或取消系統管理員）；活動紀錄只能由 trigger 寫入，使用者無法竄改。
 
@@ -173,6 +177,7 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `save_dashboard_prefs(p)` | 儲存自己的 Dashboard 設定（只保留已知的區塊與設定值） |
 | `import_notion(p)` / `resolve_notion(id)` | Notion 匯入與內部連結導向（見下方「Notion 匯入」） |
 | `list_page_settings()` / `save_page_setting(key, emoji, title, title_en)` | 側邊欄頁面名稱與圖示（修改限 Admin） |
+| `delete_activity(p)` | 批量刪除活動紀錄（限系統管理員）：`ids` 陣列，或 `before`（台灣日期 00:00 以前）搭配可選的 `entity_type`、`actor_id`；回傳刪除筆數 |
 | `get_dashboard(p_days)` | Dashboard 一次取回：KPI、我的任務（前 8 項）、專案進度、論文各階段數量與最新 3 篇、最近 3 場會議、下次會議、未來 14 天截止日；依呼叫者 RLS |
 | `dashboard_kpis()` | 進行中專案數、本週待辦任務數、逾期任務數、今年已發表數、投稿中（投稿＋審稿修改）數 |
 | `v_project_overview` | 每個專案的手動進度、任務總數／完成數／逾期數與任務完成率 |

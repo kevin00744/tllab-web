@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isPrivatePath } from "@/lib/nav";
 import { updateSession } from "@/lib/supabase/proxy";
 
 const PUBLIC_PATHS = ["/login", "/signup"];
@@ -9,10 +10,11 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  if (!userId && !isPublic) {
+  // 未登入可唯讀瀏覽；會議、行事曆與個人／管理頁面需要登入
+  if (!userId && isPrivatePath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + search)}`;
+    url.search = `?next=${encodeURIComponent(pathname + search)}`;
     return redirectWithCookies(url, response);
   }
   if (userId && isPublic) {

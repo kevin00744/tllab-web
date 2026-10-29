@@ -5,16 +5,21 @@ import { signOut } from "@/app/(auth)/actions";
 import Link from "next/link";
 import { TriangleAlertIcon } from "lucide-react";
 
-import { getCurrentMember, mustChangePassword } from "@/lib/auth";
+import { getCurrentMember, getUserId, mustChangePassword } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
-import { navGroups } from "@/lib/nav";
+import { GUEST_HIDDEN, navGroups } from "@/lib/nav";
 import { getPageMetas } from "@/lib/pages";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ locale, t }, member, changePassword] = await Promise.all([getI18n(), getCurrentMember(), mustChangePassword()]);
+  const [{ locale, t }, userId, member, changePassword] = await Promise.all([
+    getI18n(),
+    getUserId(),
+    getCurrentMember(),
+    mustChangePassword(),
+  ]);
 
-  // 已登入但沒有成員資料（例如成員被刪除）：看不到任何內容
-  if (!member) {
+  // 已登入但沒有成員資料（例如成員被刪除）：看不到任何內容；未登入則以訪客身分唯讀瀏覽
+  if (userId && !member) {
     return (
       <div className="flex min-h-dvh items-center justify-center px-4">
         <div className="max-w-sm text-center">
@@ -33,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const metas = await getPageMetas(locale, t);
   const groups: SidebarGroup[] = navGroups.map((group) => ({
     label: group.label ? t.nav[group.label] : undefined,
-    items: group.items.map((item) => metas.get(item.key)!),
+    items: group.items.filter((item) => member || !GUEST_HIDDEN.includes(item.key)).map((item) => metas.get(item.key)!),
   }));
 
   return (

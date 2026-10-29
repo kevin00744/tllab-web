@@ -21,14 +21,15 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- anon：完全不可讀
+-- anon：只能讀公開資料（完整測試見「階段 10」）
 -- ---------------------------------------------------------------------------
 set role anon;
 do $$
 begin
+  assert (select count(*) from members) > 0, 'anon 可讀成員公開欄位';
   begin
-    perform 1 from members;
-    assert (select count(*) from members) = 0, 'anon 不應讀到成員';
+    perform email from members limit 1;
+    raise exception 'anon 不應讀到 email';
   exception when insufficient_privilege then null;
   end;
 end $$;
@@ -387,13 +388,13 @@ end $$;
 reset role;
 reset request.jwt.claim.sub;
 
--- anon 不可呼叫
+-- anon：可呼叫，但沒有個人化資料（階段 10）
 set role anon;
 do $$
+declare d jsonb := get_dashboard();
 begin
-  perform get_dashboard();
-  raise exception 'anon 不應可呼叫 get_dashboard';
-exception when insufficient_privilege then null;
+  assert d -> 'my_tasks' = '[]'::jsonb or d -> 'my_tasks' is null, 'anon 沒有我的任務';
+  assert not exists (select 1 from jsonb_array_elements(d -> 'deadlines') x where (x ->> 'mine')::boolean);
 end $$;
 reset role;
 
@@ -1184,6 +1185,125 @@ begin
   assert (select title from calendar_events where id = v) = '顯微鏡預約（延長）', '成員可共同編輯';
   begin perform delete_calendar_event(v); raise exception 'x';
   exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- =============================================================================
+-- 階段 10：未登入唯讀（不含會議、未發表論文、行事曆、email、附件）；活動紀錄批量刪除
+-- =============================================================================
+set role anon;
+do $$
+declare
+  j jsonb;
+  n int;
+begin
+  assert (select count(*) from projects) > 0, 'anon 可讀專案';
+  assert (select count(*) from tasks) > 0 and (select count(*) from task_assignees) > 0, 'anon 可讀任務';
+  assert (select count(*) from documents) > 0 and (select count(*) from faqs) > 0, 'anon 可讀文件／FAQ';
+  assert (select count(*) from software_tools) > 0 and (select count(*) from pipeline_steps) > 0, 'anon 可讀軟體／流程';
+  assert (select count(*) from publications) > 0, 'anon 可讀已發表論文';
+  assert not exists (select 1 from publications where stage <> 'published'), 'anon 不可讀未發表論文';
+  assert not exists (select 1 from publication_authors pa where not exists (select 1 from publications p where p.id = pa.publication_id)),
+    'anon 不可讀未發表論文作者';
+  assert (select count(*) from meetings) = 0 and (select count(*) from meeting_attendees) = 0
+     and (select count(*) from action_items) = 0, 'anon 不可讀會議';
+  assert (select count(*) from calendar_events) = 0 and (select count(*) from calendar_event_members) = 0, 'anon 不可讀行事曆';
+  assert (select count(*) from attachments) = 0, 'anon 不可讀附件';
+  assert (select count(*) from invite_codes) = 0, 'anon 不可讀邀請碼';
+  assert (select count(*) from member_preferences) = 0;
+  assert not exists (select 1 from activity_log where entity_type in ('meeting', 'calendar_event')), 'anon 看不到會議活動';
+  assert exists (select 1 from activity_log where entity_type = 'project'), 'anon 看得到專案活動';
+  begin perform user_id from members limit 1; raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform app_role from members limit 1; raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  -- 寫入一律拒絕
+  begin insert into projects (title) values ('x'); raise exception 'anon 不應可新增';
+  exception when insufficient_privilege then null; end;
+  begin update faqs set question = 'x'; raise exception 'anon 不應可修改';
+  exception when insufficient_privilege then null; end;
+  begin delete from activity_log; raise exception 'anon 不應可刪除';
+  exception when insufficient_privilege then null; end;
+  begin perform save_task('{"title":"x"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform create_invite_code('member', 'phd', null, null, 1, 7, null); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform delete_activity('{"before":"2100-01-01"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform list_meetings('{}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  -- 讀取函式
+  j := list_members('{}');
+  assert jsonb_array_length(j) > 0, 'anon list_members';
+  assert not exists (select 1 from jsonb_array_elements(j) e where e ->> 'email' is not null or (e ->> 'has_account')::boolean
+                       or (e ->> 'is_system_admin')::boolean), 'anon 看不到 email／帳號資訊';
+  assert jsonb_array_length(list_members('{"q":"tllab.example"}')) = 0, 'anon 不能以 email 搜尋';
+  j := get_member('10000000-0000-0000-0000-000000000001');
+  assert j ->> 'name' = 'Tsung-Lin Liu' and j ->> 'email' is null, 'anon get_member';
+  assert jsonb_array_length(list_projects('{}')) = (select count(*) from projects);
+  j := get_project('20000000-0000-0000-0000-000000000001');
+  assert j ->> 'title' is not null and not (j ->> 'editable')::boolean, 'anon get_project 不可編輯';
+  assert jsonb_array_length(list_attachments('project', '20000000-0000-0000-0000-000000000001')) = 0;
+  assert jsonb_array_length(list_tasks('{}')) > 0;
+  assert not exists (select 1 from jsonb_array_elements(list_tasks('{}')) e where e -> 'meeting' <> 'null'::jsonb), '任務不帶出會議';
+  assert not exists (select 1 from jsonb_array_elements(list_publications('{}')) e where e ->> 'stage' <> 'published');
+  perform publication_year_stats();
+  perform form_options();
+  j := get_dashboard(14);
+  assert (j -> 'kpis') is not null and jsonb_array_length(j -> 'upcoming') = 0, 'anon get_dashboard';
+  assert jsonb_array_length(list_calendar(current_date - 60, current_date + 60, '{}')) = 0
+      or not exists (select 1 from jsonb_array_elements(list_calendar(current_date - 60, current_date + 60, '{}')) e
+                      where e ->> 'kind' in ('event', 'meeting')), 'anon 行事曆沒有活動／會議';
+  assert jsonb_array_length(list_documents('orientation')) > 0;
+  assert jsonb_array_length(list_faqs('{}')) > 0 and jsonb_array_length(list_software('{}')) > 0
+     and jsonb_array_length(list_pipelines('{}')) > 0;
+  perform faq_categories();
+  perform list_page_settings();
+  select count(*) into n from search_all('Lab meeting', 50) s where s.entity_type in ('meeting', 'calendar_event');
+  assert n = 0, 'anon 搜尋不到會議';
+  select count(*) into n from search_all('tllab.example', 50);
+  assert n = 0, 'anon 不能以 email 搜尋成員';
+  assert (select count(*) from search_all('斑馬魚', 50)) > 0, 'anon 可搜尋公開資料';
+  j := list_activity('{}');
+  assert not exists (select 1 from jsonb_array_elements(coalesce(j -> 'items', j)) e where e ->> 'entity_type' = 'meeting');
+end $$;
+reset role;
+
+-- 登入後仍看得到 email（member_card 沒有遮蔽）
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';
+do $$
+begin
+  assert get_member('10000000-0000-0000-0000-000000000001') ->> 'email' is not null, '登入後可看到 email';
+  assert exists (select 1 from meetings), '登入後可看到會議';
+  begin perform delete_activity('{"before":"2100-01-01"}'); raise exception '一般成員不可批量刪除';
+  exception when insufficient_privilege then null; end;
+end $$;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';  -- 陳怡君（admin，非系統管理員）
+do $$
+begin
+  begin perform delete_activity('{"before":"2100-01-01"}'); raise exception '管理員不可批量刪除';
+  exception when insufficient_privilege then null; end;
+end $$;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';  -- PI（系統管理員）
+do $$
+declare
+  total int := (select count(*) from activity_log);
+  v_ids bigint[] := (select array_agg(id) from (select id from activity_log order by created_at desc limit 2) x);
+  v_old int := (select count(*) from activity_log where entity_type = 'faq' and created_at < (lab_today() - 1)::timestamp at time zone 'Asia/Taipei');
+  n int;
+begin
+  begin perform delete_activity('{}'); raise exception 'x';
+  exception when invalid_parameter_value then null; end;
+  n := delete_activity(jsonb_build_object('ids', to_jsonb(v_ids)));
+  assert n = 2 and (select count(*) from activity_log) = total - 2, '依 id 刪除';
+  n := delete_activity(jsonb_build_object('before', lab_today() - 1, 'entity_type', 'faq'));
+  assert n = v_old, '依日期與類型刪除';
+  assert not exists (select 1 from activity_log where entity_type = 'faq' and created_at < (lab_today() - 1)::timestamp at time zone 'Asia/Taipei');
+  n := delete_activity(jsonb_build_object('before', lab_today() + 1, 'actor_id', '10000000-0000-0000-0000-000000000001'));
+  assert not exists (select 1 from activity_log where actor_id = '10000000-0000-0000-0000-000000000001');
+  assert (select count(*) from activity_log) > 0, '其他成員的紀錄保留';
 end $$;
 reset role;
 reset request.jwt.claim.sub;

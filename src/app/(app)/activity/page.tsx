@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ActivityBulk } from "@/components/activity/activity-bulk";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { FilterBar, FilterSelect } from "@/components/common/filters";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { getCurrentMember, getUserId } from "@/lib/auth";
 import { getFormOptions, isUuid, listActivity } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
-import { SEARCH_ORDER } from "@/lib/search";
+import { GUEST_HIDDEN_TYPES, SEARCH_ORDER } from "@/lib/search";
+import { isSystemAdmin } from "@/lib/status";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -21,12 +24,15 @@ const PAGE = 50;
 export default async function ActivityPage({ searchParams }: PageProps<"/activity">) {
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
-  const type = SEARCH_ORDER.find((x) => x === str("type"));
+  const guest = !(await getUserId());
+  const types = SEARCH_ORDER.filter((x) => !guest || !GUEST_HIDDEN_TYPES.includes(x));
+  const type = types.find((x) => x === str("type"));
   const member = isUuid(str("member")) ? str("member") : undefined;
   const entity = isUuid(str("entity")) ? str("entity") : undefined;
   const before = /^\d+$/.test(str("before") ?? "") ? str("before") : undefined;
-  const [{ locale, t }, options, entries] = await Promise.all([
+  const [{ locale, t }, me, options, entries] = await Promise.all([
     getI18n(),
+    getCurrentMember(),
     getFormOptions(),
     listActivity({ entity_type: type, entity_id: entity, actor_id: member, before, limit: PAGE }),
   ]);
@@ -43,11 +49,17 @@ export default async function ActivityPage({ searchParams }: PageProps<"/activit
     <>
       <PageHeader emoji={meta.emoji} title={meta.title} description={t.activity.description} />
       <FilterBar>
-        <FilterSelect param="type" label={t.activity.anyType} options={SEARCH_ORDER.map((x) => ({ value: x, label: t.search.types[x] }))} />
+        <FilterSelect param="type" label={t.activity.anyType} options={types.map((x) => ({ value: x, label: t.search.types[x] }))} />
         <FilterSelect param="member" label={t.activity.anyMember} options={options.members.map((m) => ({ value: m.id, label: m.name }))} />
       </FilterBar>
       <div className="rounded-xl border px-4 py-3">
-        <ActivityFeed entries={entries} t={t} locale={locale} today={today} />
+        {isSystemAdmin(me) ? (
+          <ActivityBulk ids={entries.map((e) => e.id)} filter={{ entity_type: type, actor_id: member }} today={today}>
+            <ActivityFeed entries={entries} t={t} locale={locale} today={today} />
+          </ActivityBulk>
+        ) : (
+          <ActivityFeed entries={entries} t={t} locale={locale} today={today} />
+        )}
       </div>
       <div className="mt-4 flex justify-between gap-2">
         {before ? (

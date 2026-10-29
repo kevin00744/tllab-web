@@ -4,12 +4,18 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Member } from "@/types/db";
 
-/** 目前登入者的成員資料；同一次 render 內只查一次 */
-export const getCurrentMember = cache(async (): Promise<Member | null> => {
+/** 目前登入者的 auth user id；未登入（訪客）為 null */
+export const getUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
-  const userId = claims?.claims?.sub;
+  return claims?.claims?.sub ?? null;
+});
+
+/** 目前登入者的成員資料；同一次 render 內只查一次 */
+export const getCurrentMember = cache(async (): Promise<Member | null> => {
+  const userId = await getUserId();
   if (!userId) return null;
+  const supabase = await createClient();
 
   const { data } = await supabase
     .from("members")

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       </CardHeader>
       <CardContent>
         <LoginForm next={target === "/" ? undefined : target} />
+        <p className="mt-4 text-center text-sm">
+          <Link href="/" className="text-muted-foreground hover:text-foreground hover:underline">
+            {t.guest.browse}
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );

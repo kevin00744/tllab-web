@@ -17,6 +17,9 @@ import { getPageMetas } from "@/lib/pages";
 import { createClient } from "@/lib/supabase/server";
 import type { DashboardData } from "@/types/dashboard";
 
+// 訪客看不到個人化與會議／行事曆區塊
+const GUEST_HIDDEN_SECTIONS: SectionKey[] = ["my_tasks", "meetings", "calendar"];
+
 // 寬區塊佔 3 欄、窄區塊佔 2 欄（lg 以上 5 欄格線，grid-flow-dense 自動補位）
 const SPAN: Record<SectionKey, string> = {
   kpis: "lg:col-span-5",
@@ -41,13 +44,14 @@ export default async function DashboardPage() {
 
   if (error) console.error("get_dashboard failed", error);
 
+  const guest = !member;
   const prefs = normalizePrefs(dashboard?.prefs);
   const projects = dashboard ? scoped(dashboard.projects, prefs.scope.projects) : null;
   const deadlines = dashboard ? scoped(dashboard.deadlines, prefs.scope.deadlines) : null;
 
   const sections = dashboard
     ? prefs.order
-        .filter((key) => !prefs.hidden.includes(key))
+        .filter((key) => !prefs.hidden.includes(key) && !(guest && GUEST_HIDDEN_SECTIONS.includes(key)))
         .map((key) => {
           const cls = SPAN[key];
           switch (key) {
@@ -108,7 +112,7 @@ export default async function DashboardPage() {
     <>
       <PageHeader
         emoji={metas.get("dashboard")!.emoji}
-        title={format(t.dashboard.welcome, { name: member?.name ?? "" })}
+        title={member ? format(t.dashboard.welcome, { name: member.name }) : t.guest.welcome}
         description={
           <>
             {dashboard ? (
@@ -120,8 +124,14 @@ export default async function DashboardPage() {
             </span>
           </>
         }
-        actions={dashboard ? <CustomizeDashboard prefs={prefs} /> : null}
+        actions={dashboard && !guest ? <CustomizeDashboard prefs={prefs} /> : null}
       />
+
+      {guest ? (
+        <p className="mb-4 rounded-lg border bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground" data-testid="guest-note">
+          {t.guest.note}
+        </p>
+      ) : null}
 
       {!dashboard ? (
         <div role="alert" className="rounded-xl border bg-status-red-bg px-5 py-4 text-sm text-status-red-fg">
