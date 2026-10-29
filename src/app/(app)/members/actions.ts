@@ -17,6 +17,7 @@ export type MemberInput = {
   position?: string;
   app_role?: string;
   is_alumni?: boolean;
+  is_system_admin?: boolean;
   research_interests: string[];
   bio: string;
   join_year: string;

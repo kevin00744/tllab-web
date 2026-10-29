@@ -360,6 +360,7 @@ const zhTW = {
     photoHint: "JPG／PNG／WebP，會自動裁成正方形並縮小",
     photoTooLarge: "照片超過 5 MB",
     adminSection: "管理（僅 Admin）",
+    systemAdminHint: "只在權限為「管理者」時有效；可變更其他管理員的身分、重設密碼與刪除。",
     adminLocked: "這位是管理員：權限、職稱、Email、校友狀態、密碼與刪除只有系統管理員可以變更。",
     account: "登入帳號",
     accountLinked: "已綁定",

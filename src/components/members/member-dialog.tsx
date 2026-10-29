@@ -32,6 +32,7 @@ function initial(m: MemberProfile | null): MemberInput {
     position: m?.position ?? "master",
     app_role: m?.app_role ?? "member",
     is_alumni: m?.is_alumni ?? false,
+    is_system_admin: m?.is_system_admin ?? false,
     research_interests: m?.research_interests ?? [],
     bio: m?.bio ?? "",
     join_year: m?.join_year ? String(m.join_year) : String(new Date().getFullYear()),
@@ -57,7 +58,16 @@ async function squareWebp(file: File): Promise<Blob> {
   );
 }
 
-export function MemberDialog({ member, isAdmin }: { member: MemberProfile | null; isAdmin: boolean }) {
+export function MemberDialog({
+  member,
+  isAdmin,
+  isSystemAdmin = false,
+}: {
+  member: MemberProfile | null;
+  isAdmin: boolean;
+  /** 目前使用者是否為系統管理員：可指定其他 Admin 為系統管理員 */
+  isSystemAdmin?: boolean;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   if (member ? !member.editable : !isAdmin) return null;
@@ -74,12 +84,22 @@ export function MemberDialog({ member, isAdmin }: { member: MemberProfile | null
           </Button>
         )}
       </DialogTrigger>
-      {open ? <MemberForm member={member} isAdmin={isAdmin} onDone={() => setOpen(false)} /> : null}
+      {open ? <MemberForm member={member} isAdmin={isAdmin} isSystemAdmin={isSystemAdmin} onDone={() => setOpen(false)} /> : null}
     </Dialog>
   );
 }
 
-function MemberForm({ member, isAdmin, onDone }: { member: MemberProfile | null; isAdmin: boolean; onDone: () => void }) {
+function MemberForm({
+  member,
+  isAdmin,
+  isSystemAdmin,
+  onDone,
+}: {
+  member: MemberProfile | null;
+  isAdmin: boolean;
+  isSystemAdmin: boolean;
+  onDone: () => void;
+}) {
   const { t } = useI18n();
   const router = useRouter();
   const [form, setForm] = useState(() => initial(member));
@@ -113,8 +133,11 @@ function MemberForm({ member, isAdmin, onDone }: { member: MemberProfile | null;
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return setError(t.errors.nameRequired);
+    const { is_system_admin, ...rest } = form;
     const input: MemberInput = {
-      ...form,
+      ...rest,
+      // 只有系統管理員送出；不是 Admin 或為校友時無效
+      ...(isSystemAdmin && member ? { is_system_admin: !!is_system_admin && form.app_role === "admin" && !form.is_alumni } : {}),
       research_interests: interests.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
       links: form.links.filter((l) => l.url.trim()),
     };
@@ -260,9 +283,24 @@ function MemberForm({ member, isAdmin, onDone }: { member: MemberProfile | null;
                   </Field>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={form.is_alumni} onChange={(e) => set("is_alumni", e.target.checked)} />
+                  <Checkbox data-testid="alumni" checked={form.is_alumni} onChange={(e) => set("is_alumni", e.target.checked)} />
                   {t.membersPage.alumni}
                 </label>
+                {isSystemAdmin && member ? (
+                  <label className="flex items-start gap-2 text-sm">
+                    <Checkbox
+                      data-testid="system-admin"
+                      className="mt-0.5"
+                      checked={!!form.is_system_admin && form.app_role === "admin" && !form.is_alumni}
+                      disabled={form.app_role !== "admin" || form.is_alumni}
+                      onChange={(e) => set("is_system_admin", e.target.checked)}
+                    />
+                    <span>
+                      {t.roles.systemAdmin}
+                      <span className="block text-xs text-muted-foreground">{t.membersPage.systemAdminHint}</span>
+                    </span>
+                  </label>
+                ) : null}
               </fieldset>
             ) : null}
           </fieldset>

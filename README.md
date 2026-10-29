@@ -279,13 +279,17 @@ update public.members set app_role = 'admin' where lower(email) = lower('<你的
 select name, email from public.members where is_system_admin;
 ```
 
-PI 之後才加入、或要指定其他人時，在 SQL Editor 執行（對方必須是 Admin、非校友）：
+系統管理員旗標只在權限（`app_role`）為 `admin` 且非校友時有效；權限改成 member／viewer 或設為校友時會自動取消。
+
+**之後用網頁管理**：系統管理員到成員頁 →「編輯成員」，在管理區把權限設為「管理者」，再勾選「系統管理員」即可（一般 Admin 看不到這個選項）；取消勾選或把權限改掉就會移除。
+
+還沒有任何系統管理員時（例如 PI 之後才加入），先在 SQL Editor 執行一次（對方必須是 Admin、非校友）：
 
 ```sql
 update public.members set app_role = 'admin', is_system_admin = true where lower(email) = lower('<PI 的信箱>');
 ```
 
-移交時先設定新的系統管理員，再取消舊的（系統至少需要保留一位系統管理員）：
+移交時先勾選新的系統管理員，再取消舊的（系統至少需要保留一位系統管理員）。用 SQL 取消：
 
 ```sql
 update public.members set is_system_admin = false where lower(email) = lower('<舊的信箱>');

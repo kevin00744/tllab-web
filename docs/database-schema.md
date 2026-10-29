@@ -15,6 +15,7 @@
 | `20261029000009_project_files.sql` | 專案頁面本文（Markdown，含版本號偵測同時編輯）、進度報告簡報附件、活動紀錄合併與截短 |
 | `20261029000010_members_api.sql` | 成員列表／個人頁／編輯／刪除 API、邀請碼列表與撤銷（階段 5） |
 | `20261029000011_system_admin.sql` | 系統管理員 `members.is_system_admin`（預設給 PI）：管理員的身分只有系統管理員能變更 |
+| `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -151,7 +152,7 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | 修改頁面 emoji 設定 | ✅ | ❌ | ❌ | ❌ |
 | 產生／查看／撤銷邀請碼 | ✅ | ❌ | ❌ | ❌ |
 
-另有保護：系統至少保留一位 Admin 與一位系統管理員（`members_protect_admin` trigger；不再是 Admin 或成為校友時自動取消系統管理員；指定系統管理員只能在 SQL Editor 進行）；活動紀錄只能由 trigger 寫入，使用者無法竄改。
+另有保護：系統至少保留一位 Admin 與一位系統管理員（`members_protect_admin` trigger；不再是 Admin 或成為校友時自動取消系統管理員；只有系統管理員能指定或取消系統管理員）；活動紀錄只能由 trigger 寫入，使用者無法竄改。
 
 ## 函式與檢視
 

@@ -760,3 +760,46 @@ begin
   begin update members set is_system_admin = false where id = '10000000-0000-0000-0000-000000000001'; raise exception 'x';
   exception when insufficient_privilege then null; end;
 end $$;
+
+-- 以網頁（save_member）管理系統管理員（migration 12）
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';  -- 一般 Admin：送來的值被忽略
+do $$
+begin
+  perform save_member(get_member('10000000-0000-0000-0000-000000000002') || '{"is_system_admin":true}');
+  assert not (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000002'), '一般 Admin 不能自封';
+end $$;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';  -- 系統管理員
+do $$
+begin
+  perform save_member(get_member('10000000-0000-0000-0000-000000000002') || '{"is_system_admin":true}');
+  assert (get_member('10000000-0000-0000-0000-000000000002') ->> 'is_system_admin')::boolean, '系統管理員可指定其他 Admin';
+  -- 非 Admin 不能成為系統管理員：同時改成 member 時自動取消
+  perform save_member(get_member('10000000-0000-0000-0000-000000000003') || '{"is_system_admin":true,"app_role":"member"}');
+  assert not (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000003');
+  -- 取消其他人的系統管理員
+  perform save_member(get_member('10000000-0000-0000-0000-000000000002') || '{"is_system_admin":false}');
+  assert not (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000002');
+  -- 不能取消最後一位
+  begin perform save_member(get_member('10000000-0000-0000-0000-000000000001') || '{"is_system_admin":false}'); raise exception 'x';
+  exception when insufficient_privilege then assert sqlerrm like '%系統管理員%'; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- is_system_admin 只在 app_role = 'admin' 時有效
+do $$
+begin
+  alter table members drop constraint members_system_admin_is_admin;
+  alter table members disable trigger members_protect_admin;  -- 模擬旗標殘留
+  update members set app_role = 'member' where id = '10000000-0000-0000-0000-000000000002';
+  update members set is_system_admin = true where id = '10000000-0000-0000-0000-000000000002';
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-0000-0000-000000000002', true);
+  assert (select is_system_admin from members where id = '10000000-0000-0000-0000-000000000002');
+  assert not is_system_admin(), 'app_role 不是 admin 時旗標無效';
+  reset role;
+  raise exception 'rollback' using errcode = 'P0001';
+exception when raise_exception then
+  if sqlerrm <> 'rollback' then raise; end if;
+end $$;

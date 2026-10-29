@@ -18,7 +18,7 @@ import { getFormOptions, getMember, isUuid } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
-import { projectStatusTone, roleLabel, roleTone, statusLabel } from "@/lib/status";
+import { isSystemAdmin, projectStatusTone, roleLabel, roleTone, statusLabel } from "@/lib/status";
 
 export async function generateMetadata({ params }: PageProps<"/members/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -86,7 +86,7 @@ export default async function MemberDetailPage({ params }: PageProps<"/members/[
             </div>
           </div>
         </div>
-        <MemberDialog member={member} isAdmin={isAdmin} />
+        <MemberDialog member={member} isAdmin={isAdmin} isSystemAdmin={isSystemAdmin(me)} />
       </div>
 
       {member.is_me ? <p className="mb-4 text-sm text-muted-foreground">{t.membersPage.profileHint}</p> : null}

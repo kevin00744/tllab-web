@@ -362,6 +362,7 @@ const en: Dictionary = {
     photoHint: "JPG / PNG / WebP, cropped to a square and resized automatically",
     photoTooLarge: "Photo is larger than 5 MB",
     adminSection: "Admin only",
+    systemAdminHint: "Only applies when the role is Admin. Can change other admins’ roles, reset their passwords and delete them.",
     adminLocked: "This member is an admin. Only the system admin can change their role, position, email, alumni status or password, or delete them.",
     account: "Login account",
     accountLinked: "Linked",
