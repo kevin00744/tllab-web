@@ -11,6 +11,7 @@
 | `20261029000005_invite_codes.sql` | 邀請碼註冊（Email＋密碼）：邀請碼、使用紀錄與伺服器端註冊函式 |
 | `20261029000006_keep_author_names.sql` | 刪除成員時保留論文作者姓名 |
 | `20261029000007_dashboard.sql` | `get_dashboard()`：Dashboard 所需資料一次取回 |
+| `20261029000008_projects_tasks_publications_api.sql` | 專案／任務／論文的讀寫函式（網頁一律經由這些函式存取，權限仍由 RLS 決定） |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -160,6 +161,14 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `v_publication_stage_counts` | 論文各階段數量（看板統計） |
 | `convert_action_item_to_task(id)` | Action item 一鍵轉 Task |
 | `lab_today()` | 以 Asia/Taipei 計算的「今天」 |
+| `form_options()` | 表單下拉選單：成員、專案、論文，以及目前使用者能否新增 |
+| `list_projects(filter)` / `get_project(id)` | 專案列表（含負責人、成員、任務統計、`editable`／`deletable`）；詳細頁另含任務、論文、會議 |
+| `save_project(p)` / `delete_project(id)` | 新增或更新專案與參與成員；無權限時回 42501 |
+| `list_tasks(filter)` | 篩選：`mine`、`member_id`、`project_id`、`overdue`、`status`、`q`、`due_from`／`due_to` |
+| `save_task(p)` / `move_task(id, status, position)` / `delete_task(id)` | 任務與指派對象；`move_task` 供看板拖拉 |
+| `list_publications(filter)` | 篩選：`stage`、`type`、`project_id`、`member_id`（作者）、`year`、`q` |
+| `save_publication(p)` / `delete_publication(id)` | 論文與有序作者清單（成員或外部作者、第一／通訊作者） |
+| `publication_year_stats()` | 各年度已發表數（依類型）與投稿數 |
 | `create_invite_code(...)` | 產生邀請碼（Admin），回傳原文一次 |
 | `claim_invite_code` / `release_invite_code` / `complete_invite_signup` | 邀請碼註冊流程（僅 service_role） |
 
@@ -173,4 +182,4 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 scripts/test-db.sh
 ```
 
-會在暫存的 PostgreSQL 16 上模擬 Supabase 的 `auth`／`storage` schema，依序套用 migrations、seed，並執行 `supabase/tests/rls_test.sql`（登入綁定、各權限等級讀寫、活動紀錄、搜尋、KPI、Action item 轉換、Admin 保護、邀請碼註冊），最後測試備份與還原。
+會在暫存的 PostgreSQL 16 上模擬 Supabase 的 `auth`／`storage` schema，依序套用 migrations、seed，並執行 `supabase/tests/rls_test.sql`（登入綁定、各權限等級讀寫、活動紀錄、搜尋、KPI、Action item 轉換、Admin 保護、邀請碼註冊），最後測試備份與還原。階段 4 的 API 測試包含：權限邊界（無關專案不可改、唯讀帳號不可新增）、只有作者身分者修改作者清單、搜尋字詞跳脫、日期與標題驗證。

@@ -396,3 +396,129 @@ begin
 exception when insufficient_privilege then null;
 end $$;
 reset role;
+
+-- ---------------------------------------------------------------------------
+-- 階段 4 API：專案／任務／論文
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email) values ('aaaaaaaa-0000-0000-0000-000000000006', 'pohan.huang@tllab.example');
+
+-- 張家豪（member）
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';
+do $$
+declare
+  v_pid uuid;
+  v_tid uuid;
+  v_pub uuid;
+  j jsonb;
+begin
+  -- 專案列表：進行中排前，帶 editable
+  j := list_projects();
+  assert jsonb_array_length(j) = 6;
+  assert j -> 0 ->> 'status' = 'active';
+  assert (select (x ->> 'editable')::boolean from jsonb_array_elements(j) x
+           where x ->> 'id' = '20000000-0000-0000-0000-000000000001'), '自己負責的專案 editable';
+  assert not (select (x ->> 'editable')::boolean from jsonb_array_elements(j) x
+               where x ->> 'id' = '20000000-0000-0000-0000-000000000002'), '無關專案不可編輯';
+  assert jsonb_array_length(list_projects('{"status":"completed"}')) = 1;
+  assert jsonb_array_length(list_projects('{"q":"斑馬魚"}')) = 1;
+  assert jsonb_array_length(list_projects('{"q":"100%"}')) = 0, '% 需跳脫';
+
+  -- 建立專案＋參與成員
+  v_pid := save_project('{"title":"  新專案  ","emoji":"🧬","status":"active","progress":10,
+                          "start_date":"2026-11-01","due_date":"2027-06-30","tags":["AI"," AI ",""],
+                          "owner_id":"10000000-0000-0000-0000-000000000005",
+                          "member_ids":["10000000-0000-0000-0000-000000000006","10000000-0000-0000-0000-000000000008"]}');
+  j := get_project(v_pid);
+  assert j ->> 'title' = '新專案' and j -> 'tags' = '["AI"]'::jsonb, '標題去空白、標籤去重';
+  assert jsonb_array_length(j -> 'members') = 2;
+  assert (j ->> 'editable')::boolean and (j ->> 'deletable')::boolean;
+
+  -- 驗證
+  begin perform save_project('{"title":" "}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'titleRequired'; end;
+  begin perform save_project('{"title":"a","start_date":"2026-12-01","due_date":"2026-11-01"}'); raise exception 'x';
+  exception when invalid_parameter_value then assert sqlerrm = 'dateOrder'; end;
+
+  -- 無權限編輯／刪除
+  begin perform save_project('{"id":"20000000-0000-0000-0000-000000000002","title":"偷改"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform delete_project('20000000-0000-0000-0000-000000000002'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+
+  -- 專案詳細頁：任務、論文、會議
+  j := get_project('20000000-0000-0000-0000-000000000001');
+  assert jsonb_array_length(j -> 'tasks') >= 4, '專案任務';
+  assert jsonb_array_length(j -> 'publications') = 2, '專案論文';
+  assert jsonb_array_length(j -> 'meetings') = 2, '專案會議';
+
+  -- 任務：建立、指派、篩選、拖拉、刪除
+  v_tid := save_task(jsonb_build_object('title', '新任務', 'project_id', v_pid, 'priority', 'high',
+                     'due_date', lab_today() - 1,
+                     'assignee_ids', jsonb_build_array('10000000-0000-0000-0000-000000000005')));
+  assert exists (select 1 from jsonb_array_elements(list_tasks('{"mine":true}')) x where x ->> 'id' = v_tid::text);
+  assert exists (select 1 from jsonb_array_elements(list_tasks('{"overdue":true}')) x where x ->> 'id' = v_tid::text);
+  assert jsonb_array_length(list_tasks(jsonb_build_object('project_id', v_pid))) = 1;
+  assert jsonb_array_length(list_tasks(jsonb_build_object('due_from', lab_today(), 'due_to', lab_today() + 7))) >= 3;
+  j := move_task(v_tid, 'done', 0.5);
+  assert j ->> 'status' = 'done' and (j ->> 'completed_at') is not null and (j ->> 'position')::float = 0.5;
+  begin perform move_task('50000000-0000-0000-0000-000000000014', 'done', 1); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  perform save_task(jsonb_build_object('id', v_tid, 'title', '新任務（改）', 'status', 'in_review',
+                    'assignee_ids', '[]'::jsonb));
+  assert (select count(*) from task_assignees where task_id = v_tid) = 0;
+  perform delete_task(v_tid);
+  assert not exists (select 1 from tasks where id = v_tid);
+
+  -- 論文：建立（含外部作者）、統計
+  v_pub := save_publication(jsonb_build_object('title', '新論文', 'type', 'conference', 'stage', 'drafting',
+             'authors', jsonb_build_array(
+               jsonb_build_object('member_id', '10000000-0000-0000-0000-000000000005'),
+               jsonb_build_object('display_name', 'External Coauthor'),
+               jsonb_build_object('display_name', '  '),
+               jsonb_build_object('member_id', '10000000-0000-0000-0000-000000000001', 'is_corresponding', true))));
+  j := (select x from jsonb_array_elements(list_publications('{"stage":"drafting"}')) x where x ->> 'id' = v_pub::text);
+  assert jsonb_array_length(j -> 'authors') = 3, '空白作者略過';
+  assert (j -> 'authors' -> 0 ->> 'is_first_author')::boolean, '第一位預設為第一作者';
+  assert j -> 'authors' -> 1 ->> 'name' = 'External Coauthor';
+  assert (j -> 'authors' -> 2 ->> 'is_corresponding')::boolean;
+  assert jsonb_array_length(list_publications('{"member_id":"10000000-0000-0000-0000-000000000005"}')) >= 3;
+  j := publication_year_stats();
+  assert exists (select 1 from jsonb_array_elements(j) x
+                  where (x ->> 'year')::int = extract(year from lab_today()) and (x ->> 'journal')::int >= 1);
+  -- 表單選單
+  j := form_options();
+  assert jsonb_array_length(j -> 'members') > 0 and (j ->> 'can_create')::boolean;
+end $$;
+
+-- 黃柏翰：只有「作者」身分的論文，修改作者清單（含移除自己）仍可成功
+reset role;
+reset request.jwt.claim.sub;
+insert into publications (id, title, created_by) values ('30000000-0000-0000-0000-0000000000aa', '只有作者身分', '10000000-0000-0000-0000-000000000001');
+insert into publication_authors (publication_id, member_id, author_order) values
+  ('30000000-0000-0000-0000-0000000000aa', '10000000-0000-0000-0000-000000000006', 1);
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000006';
+do $$
+begin
+  assert (select (x ->> 'editable')::boolean from jsonb_array_elements(list_publications()) x
+           where x ->> 'id' = '30000000-0000-0000-0000-0000000000aa'), '作者可編輯';
+  perform save_publication('{"id":"30000000-0000-0000-0000-0000000000aa","title":"只有作者身分","authors":[{"display_name":"Someone Else"}]}');
+  assert (select count(*) from publication_authors where publication_id = '30000000-0000-0000-0000-0000000000aa') = 1;
+  begin
+    perform save_publication('{"id":"30000000-0000-0000-0000-0000000000aa","title":"再改"}');
+    raise exception '移除自己後不應可再編輯';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
+-- 校友（viewer）不可建立
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000013';
+do $$
+begin
+  begin perform save_task('{"title":"viewer"}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  assert not (form_options() ->> 'can_create')::boolean;
+end $$;
+reset role;
+reset request.jwt.claim.sub;

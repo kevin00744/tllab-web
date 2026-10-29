@@ -1,5 +1,73 @@
-import { ComingSoon } from "@/components/coming-soon";
+import type { Metadata } from "next";
+import { GanttChartIcon, KanbanSquareIcon, TableIcon } from "lucide-react";
 
-export default function ProjectsPage() {
-  return <ComingSoon page="projects" stage={4} />;
+import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
+import { ViewTabs } from "@/components/common/view-tabs";
+import { PageHeader } from "@/components/page-header";
+import { ProjectDialog } from "@/components/projects/project-dialog";
+import { ProjectsBoard, ProjectsTable, ProjectsTimeline } from "@/components/projects/project-views";
+import { getFormOptions, isUuid, listProjects } from "@/lib/data";
+import { labDateOf } from "@/lib/date";
+import { getI18n } from "@/lib/i18n/server";
+import { getPageMeta } from "@/lib/pages";
+import { statusLabel } from "@/lib/status";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale, t } = await getI18n();
+  return { title: (await getPageMeta("projects", locale, t)).title };
+}
+
+const VIEWS = ["table", "board", "timeline"] as const;
+const STATUSES = ["planning", "active", "paused", "completed"] as const;
+
+export default async function ProjectsPage({ searchParams }: PageProps<"/projects">) {
+  const sp = await searchParams;
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
+  const view = VIEWS.find((v) => v === str("view")) ?? "table";
+  const status = STATUSES.find((s) => s === str("status"));
+  const member = isUuid(str("member")) ? str("member") : undefined;
+
+  const [{ locale, t }, options, projects] = await Promise.all([
+    getI18n(),
+    getFormOptions(),
+    listProjects({ status, member_id: member, q: str("q") }),
+  ]);
+  const meta = await getPageMeta("projects", locale, t);
+  const today = labDateOf(new Date().toISOString());
+
+  return (
+    <>
+      <PageHeader emoji={meta.emoji} title={meta.title} actions={<ProjectDialog project={null} options={options} />} />
+      <FilterBar>
+        <ViewTabs
+          current={view}
+          views={[
+            { value: "table", label: t.views.table, icon: <TableIcon /> },
+            { value: "board", label: t.views.board, icon: <KanbanSquareIcon /> },
+            { value: "timeline", label: t.views.timeline, icon: <GanttChartIcon /> },
+          ]}
+        />
+        {view !== "board" ? (
+          <FilterSelect
+            param="status"
+            label={`${t.fields.status}：${t.common.all}`}
+            options={STATUSES.map((s) => ({ value: s, label: statusLabel(t, "project", s) }))}
+          />
+        ) : null}
+        <FilterSelect
+          param="member"
+          label={`${t.fields.members}：${t.common.all}`}
+          options={options.members.filter((m) => !m.is_alumni).map((m) => ({ value: m.id, label: m.name }))}
+        />
+        <SearchBox placeholder={t.common.search} className="w-full sm:ml-auto sm:w-56" />
+      </FilterBar>
+      {view === "table" ? (
+        <ProjectsTable projects={projects} t={t} locale={locale} />
+      ) : view === "board" ? (
+        <ProjectsBoard projects={projects} t={t} locale={locale} />
+      ) : (
+        <ProjectsTimeline projects={projects} t={t} locale={locale} today={today} />
+      )}
+    </>
+  );
 }

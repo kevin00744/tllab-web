@@ -52,6 +52,12 @@
   --stage-4: #3364db;
   --stage-5: #244ecc;
   --stage-6: #1c3cb2;
+
+  /* 論文類型（categorical，固定順序）：dataviz 參考調色盤 slot 1–4，已驗證 */
+  --cat-1: #2a78d6;
+  --cat-2: #eb6834;
+  --cat-3: #1baf7a;
+  --cat-4: #eda100;
 }
 
 .dark {
@@ -97,6 +103,11 @@
   --stage-4: #6193f1;
   --stage-5: #7baafd;
   --stage-6: #9bc2ff;
+
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
 }
 
 @theme inline {
