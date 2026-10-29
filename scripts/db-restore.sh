@@ -27,7 +27,7 @@ fi
 
 TABLES="members projects project_members publications publication_authors meetings meeting_attendees
 meeting_projects tasks task_assignees action_items documents faqs software_tools pipelines pipeline_steps
-attachments page_settings activity_log"
+attachments page_settings activity_log invite_codes invite_redemptions"
 
 existing="$("${PSQL[@]}" -X -tA -c 'select count(*) from public.members')"
 if [ "$existing" != "0" ]; then
@@ -43,18 +43,24 @@ fi
   echo "delete from public.page_settings;"
   # members.user_id → auth.users：新專案沒有帳號，先暫時移除外鍵
   echo "alter table public.members drop constraint members_user_id_fkey;"
+  echo "alter table public.invite_redemptions drop constraint invite_redemptions_user_id_fkey;"
   # documents.parent_id 自我參照，資料順序不保證父頁面先匯入
   echo "alter table public.documents drop constraint documents_parent_id_fkey;"
   for t in $TABLES; do echo "alter table public.$t disable trigger user;"; done
   "${PG_RESTORE[@]}" --data-only --no-owner -f - < "$DUMP"
   echo "update public.members set user_id = null;"
+  echo "update public.invite_redemptions set user_id = null;"
   for t in $TABLES; do echo "alter table public.$t enable trigger user;"; done
   echo "alter table public.documents add constraint documents_parent_id_fkey
           foreign key (parent_id) references public.documents (id) on delete cascade;"
   echo "alter table public.members add constraint members_user_id_fkey
           foreign key (user_id) references auth.users (id) on delete set null;"
-  echo "select setval(pg_get_serial_sequence('public.activity_log', 'id'),
-                      coalesce((select max(id) from public.activity_log), 0) + 1, false);"
+  echo "alter table public.invite_redemptions add constraint invite_redemptions_user_id_fkey
+          foreign key (user_id) references auth.users (id) on delete set null;"
+  for t in activity_log invite_redemptions; do
+    echo "select setval(pg_get_serial_sequence('public.$t', 'id'),
+                        coalesce((select max(id) from public.$t), 0) + 1, false);"
+  done
   echo "commit;"
 } | "${PSQL[@]}" -X -q > /dev/null
 

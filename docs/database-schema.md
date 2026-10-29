@@ -8,6 +8,7 @@
 | `20261029000002_auth_rls.sql` | 登入自動綁定成員、權限三級、Row Level Security policies |
 | `20261029000003_activity_search_views.sql` | 活動紀錄 trigger、全站搜尋 `search_all()`、Dashboard 檢視與 KPI、Action item → Task |
 | `20261029000004_storage.sql` | Storage buckets（`avatars`、`attachments`）與存取規則 |
+| `20261029000005_invite_codes.sql` | 邀請碼註冊（Email＋密碼）：邀請碼、使用紀錄與伺服器端註冊函式 |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -46,6 +47,9 @@ erDiagram
 
     MEMBERS |o--o{ ACTIVITY_LOG : "操作者"
     MEMBERS |o--o{ ATTACHMENTS : "上傳者"
+    MEMBERS |o--o{ INVITE_CODES : "綁定既有成員"
+    INVITE_CODES ||--o{ INVITE_REDEMPTIONS : "使用紀錄"
+    AUTH_USERS |o--o{ INVITE_REDEMPTIONS : ""
 ```
 
 `ATTACHMENTS` 與 `ACTIVITY_LOG` 以 `(entity_type, entity_id)` 多型關聯到任一主要資料（project / task / publication / meeting / document / faq / software_tool / pipeline / member）。
@@ -84,6 +88,8 @@ erDiagram
 | `attachments` | 圖片與附件的中繼資料；實體檔案在 Storage `attachments` bucket，路徑 `{entity_type}/{entity_id}/{檔名}` |
 | `activity_log` | 誰（`actor_id`）在何時對哪筆資料做了什麼（`insert` / `update` / `delete`），`changes` 記錄欄位新舊值 |
 | `page_settings` | 側邊欄各模組頁的 emoji 與中英文標題（Admin 可改）；個別資料列則各自有 `emoji` 欄位 |
+| `invite_codes` | 邀請碼：只存 SHA-256 雜湊與末 4 碼；預設權限、職稱、限定 Email、綁定既有成員、可用次數、有效期限、撤銷 |
+| `invite_redemptions` | 邀請碼使用紀錄（誰、何時、哪組碼） |
 
 ### 狀態值（enum）
 
@@ -115,7 +121,13 @@ erDiagram
 
 ## 權限（RLS）
 
-登入流程：Admin 先以 email 建立成員 → 成員以 Google 或 Email 登入 → `handle_new_auth_user()` 自動以 email（不分大小寫）綁定並沿用預設權限。未事先登記的帳號會自動建立為 `viewer`，等待 Admin 調整。
+登入方式：Email＋密碼，註冊需要邀請碼。Supabase 的公開註冊保持關閉，註冊由網頁伺服器端（service_role）依序執行：
+
+1. `claim_invite_code(code, email)`：原子性驗證並佔用一次邀請碼；邀請碼不分大小寫、可省略連字號；錯誤時不透露是哪一項不符。
+2. `auth.admin.createUser(email, password, email_confirm: true)`：`handle_new_auth_user()` 依 email（不分大小寫）綁定既有成員，或建立新成員（預設 `viewer`）。失敗時呼叫 `release_invite_code()` 歸還次數。
+3. `complete_invite_signup(invite_id, user_id)`：套用邀請碼的權限與職稱，並寫入使用紀錄。
+
+Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXXX`，64 bits 隨機）。邀請碼只有 Admin 看得到；上述三個伺服器端函式只有 `service_role` 能執行。
 
 | 動作 | Admin | Member | Viewer | 未登入 |
 |---|---|---|---|---|
@@ -130,6 +142,7 @@ erDiagram
 | 刪除 | ✅ | 自己建立的（專案另含負責人） | ❌ | ❌ |
 | 編輯成員資料 | ✅ | 只能改自己的個人資料，不能改權限／Email／校友狀態 | ❌ | ❌ |
 | 修改頁面 emoji 設定 | ✅ | ❌ | ❌ | ❌ |
+| 產生／查看／撤銷邀請碼 | ✅ | ❌ | ❌ | ❌ |
 
 另有保護：系統至少保留一位 Admin；活動紀錄只能由 trigger 寫入，使用者無法竄改。
 
@@ -144,6 +157,8 @@ erDiagram
 | `v_publication_stage_counts` | 論文各階段數量（看板統計） |
 | `convert_action_item_to_task(id)` | Action item 一鍵轉 Task |
 | `lab_today()` | 以 Asia/Taipei 計算的「今天」 |
+| `create_invite_code(...)` | 產生邀請碼（Admin），回傳原文一次 |
+| `claim_invite_code` / `release_invite_code` / `complete_invite_signup` | 邀請碼註冊流程（僅 service_role） |
 
 ## Notion 匯入（階段 8 預留）
 
@@ -155,4 +170,4 @@ erDiagram
 scripts/test-db.sh
 ```
 
-會在暫存的 PostgreSQL 16 上模擬 Supabase 的 `auth`／`storage` schema，依序套用 migrations、seed，並執行 `supabase/tests/rls_test.sql`（登入綁定、各權限等級讀寫、活動紀錄、搜尋、KPI、Action item 轉換、Admin 保護）。
+會在暫存的 PostgreSQL 16 上模擬 Supabase 的 `auth`／`storage` schema，依序套用 migrations、seed，並執行 `supabase/tests/rls_test.sql`（登入綁定、各權限等級讀寫、活動紀錄、搜尋、KPI、Action item 轉換、Admin 保護、邀請碼註冊），最後測試備份與還原。

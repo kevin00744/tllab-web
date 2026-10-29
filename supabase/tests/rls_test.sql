@@ -186,3 +186,143 @@ do $$
 begin
   assert (select count(*) from storage.buckets where id in ('avatars', 'attachments')) = 2;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 邀請碼註冊
+-- ---------------------------------------------------------------------------
+create temp table t_codes (k text primary key, code text);
+grant all on t_codes to authenticated, service_role;
+
+-- 非 Admin 不能產生邀請碼；Admin 可以
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000013';  -- viewer
+do $$
+begin
+  begin
+    perform create_invite_code();
+    raise exception 'viewer 不應可產生邀請碼';
+  exception when insufficient_privilege then null;
+  end;
+  assert (select count(*) from invite_codes) = 0, 'viewer 不應看到邀請碼';
+end $$;
+
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';  -- PI (admin)
+do $$
+declare v text;
+begin
+  v := create_invite_code(p_position => 'master', p_note => '2026 新生');
+  assert v ~ '^TL-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$', '邀請碼格式：' || v;
+  insert into t_codes values ('single', v);
+  insert into t_codes values ('multi', create_invite_code(p_max_uses => 2));
+  insert into t_codes values ('locked', create_invite_code(p_email => 'Only.Me@example.com'));
+  insert into t_codes values ('admin', create_invite_code(p_app_role => 'admin'));
+  insert into t_codes values ('expired', create_invite_code());
+  -- 綁定既有成員（示範資料中尚未登入的林冠宇）
+  insert into t_codes values ('bind', create_invite_code(p_member_id => '10000000-0000-0000-0000-000000000003'));
+  assert (select count(*) from invite_codes) = 6, 'admin 應可看到邀請碼';
+  assert not exists (select 1 from invite_codes where code_hash like '%' || 'TL-' || '%'), '不應存原文';
+  assert (select created_by from invite_codes where note = '2026 新生') = '10000000-0000-0000-0000-000000000001';
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+update invite_codes set expires_at = now() - interval '1 second'
+ where code_hash = encode(sha256(convert_to(normalize_invite_code((select code from t_codes where k = 'expired')), 'UTF8')), 'hex');
+
+-- 一般使用者不可直接呼叫伺服器端函式
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+do $$
+begin
+  begin
+    perform claim_invite_code((select code from t_codes where k = 'single'), 'x@example.com');
+    raise exception 'authenticated 不應可呼叫 claim_invite_code';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- 模擬網頁伺服器端註冊流程（service_role）
+create function pg_temp.signup(p_code text, p_email text) returns uuid language plpgsql as $$
+declare v_invite uuid; v_user uuid;
+begin
+  set local role service_role;
+  v_invite := claim_invite_code(p_code, p_email);
+  reset role;
+  insert into auth.users (email) values (p_email) returning id into v_user;  -- auth.admin.createUser
+  set local role service_role;
+  perform complete_invite_signup(v_invite, v_user);
+  reset role;
+  return v_user;
+end $$;
+
+do $$
+declare
+  v_user uuid;
+  v_invite uuid;
+  n int;
+begin
+  -- 單次邀請碼：使用者輸入小寫、少了連字號也能通過；套用職稱與權限
+  v_user := pg_temp.signup(lower(replace((select code from t_codes where k = 'single'), '-', ' ')), 'Newbie@Example.com');
+  assert (select app_role from members where user_id = v_user) = 'member', '應套用邀請碼權限';
+  assert (select position from members where user_id = v_user) = 'master', '應套用邀請碼職稱';
+  assert exists (select 1 from invite_redemptions where user_id = v_user), '應記錄使用紀錄';
+
+  -- 已用完
+  begin
+    perform pg_temp.signup((select code from t_codes where k = 'single'), 'second@example.com');
+    raise exception '單次邀請碼不應可重複使用';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- 多次邀請碼
+  perform pg_temp.signup((select code from t_codes where k = 'multi'), 'm1@example.com');
+  perform pg_temp.signup((select code from t_codes where k = 'multi'), 'm2@example.com');
+  begin
+    perform pg_temp.signup((select code from t_codes where k = 'multi'), 'm3@example.com');
+    raise exception '超過次數不應可使用';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- 限定 Email
+  begin
+    perform pg_temp.signup((select code from t_codes where k = 'locked'), 'other@example.com');
+    raise exception '限定 Email 的邀請碼不應給別人用';
+  exception when invalid_parameter_value then null;
+  end;
+  perform pg_temp.signup((select code from t_codes where k = 'locked'), 'only.me@EXAMPLE.com');
+
+  -- 過期、錯誤的邀請碼
+  begin
+    perform pg_temp.signup((select code from t_codes where k = 'expired'), 'late@example.com');
+    raise exception '過期邀請碼不應可使用';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform pg_temp.signup('TL-0000-0000-0000-0000', 'guess@example.com');
+    raise exception '錯誤邀請碼不應可使用';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- 撤銷
+  update invite_codes set revoked_at = now() where app_role = 'admin';
+  begin
+    perform pg_temp.signup((select code from t_codes where k = 'admin'), 'boss@example.com');
+    raise exception '撤銷的邀請碼不應可使用';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- 綁定既有成員：註冊後連到原本的成員資料，不會多出一筆
+  select count(*) into n from members;
+  v_user := pg_temp.signup((select code from t_codes where k = 'bind'), 'kuanyu.real@gmail.com');
+  assert (select id from members where user_id = v_user) = '10000000-0000-0000-0000-000000000003', '應綁定既有成員';
+  assert (select count(*) from members) = n, '不應新增成員';
+
+  -- 建立帳號失敗時歸還次數
+  update invite_codes set revoked_at = null where app_role = 'admin';
+  set local role service_role;
+  v_invite := claim_invite_code((select code from t_codes where k = 'admin'), 'boss@example.com');
+  perform release_invite_code(v_invite);
+  reset role;
+  assert (select used_count from invite_codes where id = v_invite) = 0, '失敗時應歸還次數';
+end $$;

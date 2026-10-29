@@ -33,11 +33,11 @@ PG_DUMP_CMD="pg_dump" "$ROOT/scripts/db-backup.sh" "$WORK/backups"
 PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d restore_test" "$ROOT/scripts/db-apply.sh" >/dev/null
 PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d restore_test" \
   "$ROOT/scripts/db-restore.sh" "$(ls "$WORK"/backups/tllab-*.dump)"
-for t in members projects tasks publications meetings activity_log page_settings task_assignees documents; do
+for t in members projects tasks publications meetings activity_log page_settings task_assignees documents invite_codes invite_redemptions; do
   a="$("${PSQL[@]}" -tA -c "select count(*) from public.$t")"
   b="$("${PSQL[@]}" -d restore_test -tA -c "select count(*) from public.$t")"
   [ "$a" = "$b" ] || { echo "✗ $t 筆數不符：$a vs $b"; exit 1; }
 done
 "${PSQL[@]}" -d restore_test -tA -c "select count(*) from public.members where user_id is not null" | grep -qx 0
-"${PSQL[@]}" -d restore_test -c "insert into public.tasks (title) values ('還原後可新增'); insert into public.activity_log (action, entity_type, entity_id) values ('insert','task',gen_random_uuid())"
+"${PSQL[@]}" -d restore_test -c "insert into public.tasks (title) values ('還原後可新增'); insert into public.activity_log (action, entity_type, entity_id) values ('insert','task',gen_random_uuid()); select public.create_invite_code()"
 echo "✓ 全部通過"

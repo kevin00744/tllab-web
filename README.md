@@ -76,20 +76,20 @@ Schema、ER 圖與權限說明見 [docs/database-schema.md](docs/database-schema
 - **連續 7 天沒有任何存取，專案會被暫停**。到 Dashboard 按 Restore 即可恢復，資料不會遺失。實驗室每天都在用，通常不會遇到。
 - 資料庫 500 MB、檔案儲存 1 GB。純文字資料對 20 人的實驗室綽綽有餘；如果會上傳大量圖片或附件，再考慮升級 Pro。
 - **不提供可下載的備份**，請依〈日常維運 → 備份〉自行定期匯出。
-- 內建寄信服務每小時只能寄很少封，而且只寄給專案團隊成員。要用 **Email 登入**，就必須設定自己的 SMTP（見步驟 6）。
+- 內建寄信服務每小時只能寄很少封，而且只寄給專案團隊成員。本系統的邀請碼註冊不需要寄信，所以不受影響。
 
 ## 關於網域與 HTTPS
 
-在這個架構下，Google 登入的 redirect URI 是 Supabase 的網址（`https://<ref>.supabase.co/auth/v1/callback`），所以**主機沒有公開網域也能用 Google 登入**。登入後瀏覽器會跳回網頁網址，只要你的電腦連得到主機就行，內網 IP 也可以。
+登入採 Email＋密碼＋邀請碼（步驟 6），由網頁伺服器端連到 Supabase 驗證，所以**主機不需要公開網域**，用內網 IP 也能登入。只要使用者的電腦連得到主機即可。
 
 | 情境 | 網頁網址 | 費用 | 條件 |
 |---|---|---|---|
 | 只在實驗室／校內使用 | `http://<主機 IP>` | 免費 | 使用者要在同一個網路（或學校 VPN）內；不需要 HTTPS |
-| 系所或計中核發的子網域（最建議） | `https://hub.<系所網域>` | 免費 | 向系上或計中申請 DNS 紀錄；憑證用 certbot（步驟 9） |
+| 系所或計中核發的子網域（最建議） | `https://hub.<系所網域>` | 免費 | 向系上或計中申請 DNS 紀錄；憑證用 certbot（步驟 8） |
 | Tailscale Funnel | `https://<主機名>.<tailnet>.ts.net` | 免費 | **不需要開放對外連接埠**，校外也能連，HTTPS 自動處理（見〈附錄：免費網址〉） |
 | DuckDNS 等免費 DDNS | `https://<名稱>.duckdns.org` | 免費 | 主機要有公開 IP，且學校防火牆允許校外連入 80/443 |
 
-建議先用 `http://<主機 IP>` 完成開發與測試，之後再換成正式網址。要換網址時，只需改 Supabase 的 URL Configuration 和 `.env` 的 `NEXT_PUBLIC_SITE_URL`，再重新編譯網頁；Google 那邊不用改。
+建議先用 `http://<主機 IP>` 完成開發與測試，之後再換成正式網址。要換網址時，只需改 Supabase 的 URL Configuration 和 `.env` 的 `NEXT_PUBLIC_SITE_URL`，再重新編譯網頁。
 
 以下範例使用 `hub.example.edu.tw`，請換成你的網域或 `http://<主機 IP>`。
 
@@ -192,38 +192,123 @@ cd tllab-web
 
    成功時最後會印出 `✓ 完成`。也可以到 Dashboard → **Table Editor** 確認，應該會看到 `members`、`projects`、`tasks` 等資料表。
 
-## 步驟 6：設定登入
+## 步驟 6：設定登入（Email＋密碼＋邀請碼）
 
-Supabase Dashboard → **Authentication**：
+登入方式是 **Email＋密碼**。新成員註冊時必須輸入 Admin 產生的**邀請碼**：
+- 註冊由網頁伺服器端驗證邀請碼後建立帳號，**不需要設定 SMTP 寄信**。
+- 邀請碼可設定預設權限、職稱、限定 Email、可用次數與有效期限。
+- 資料庫只存邀請碼的雜湊值，原文只在產生時顯示一次。
 
-1. **URL Configuration**
-   - Site URL：`https://hub.example.edu.tw`（或 `http://<主機 IP>`）
-   - Redirect URLs：新增 `https://hub.example.edu.tw/**`
-2. **Sign In / Providers → Google**：開啟，填入 Client ID 與 Client Secret（取得方式見〈附錄：Google 登入〉）。
-3. **Email 登入**（可選）：Email provider 預設已開啟。要寄驗證信給一般成員，必須到 **Emails → SMTP Settings** 設定自己的 SMTP：
-   - 學校信箱：填學校 SMTP 主機。
-   - Gmail：`smtp.gmail.com`、port `587`，使用者是 Gmail 帳號，密碼用「應用程式密碼」。
-4. **（強烈建議）關閉公開註冊**：在 Sign In / Providers 關閉 **Allow new users to sign up**。
-   - 原因：自行註冊的帳號雖然只會是 viewer，但 viewer **可以讀取實驗室所有資料**。
-   - 關閉後，由 Admin 到 Authentication → Users → **Add user** 新增成員：
-     - **Send invitation**：寄邀請信，需要已設定 SMTP。
-     - **Create new user**：不寄信。輸入成員的 Google 信箱、任意密碼，並勾選 Auto Confirm User。之後成員用同一個 Google 帳號登入，就會自動連結。
+### 6-1 網址
 
-## 步驟 7：建立第一位 Admin
+Supabase Dashboard → **Authentication** → **URL Configuration**：
+- **Site URL**：`http://<主機 IP>`（或 Tailscale／正式網址）
+- **Redirect URLs**：新增 `http://<主機 IP>/**`
 
-`seed.sql` 預設 PI 的 email 是占位值 `pi@tllab.example`。請到 Supabase Dashboard → **SQL Editor** 執行下面的指令，改成 PI 實際的登入信箱。PI 第一次登入時就會自動綁定為 Admin。
+### 6-2 登入方式與密碼規則
+
+Authentication → **Sign In / Providers**：
+1. **User Signups** 區塊：關閉 **Allow new users to sign up**。
+   - 關閉後，別人無法繞過邀請碼自行註冊。
+   - 網頁的邀請碼註冊走伺服器端管理 API，不受這個開關影響。
+2. **Email** provider：保持開啟。
+   - **Minimum password length** 設為 `8`。
+   - **Password Requirements** 選「Letters and digits」。
+   - 按 **Save**。
+3. 其他 provider（Google 等）保持關閉。
+
+### 6-3 建立第一位 Admin
+
+先在 **SQL Editor** 把示範資料中 PI 的 Email 改成實際要用的登入信箱：
 
 ```sql
 update public.members set email = '<PI 的登入信箱>' where position = 'pi';
 ```
 
-已經登入過、目前是 viewer 的帳號，也可以直接提升權限：
+再到 Authentication → **Users** → **Add user** → **Create new user**：
+- Email：同上
+- Password：設定登入密碼
+- 勾選 **Auto Confirm User**
+
+建立後，帳號會依 Email 自動綁定成 Admin。到 SQL Editor 確認：
 
 ```sql
-update public.members set app_role = 'admin' where email = '<信箱>';
+select name, email, app_role, user_id is not null as 已綁定 from public.members where app_role = 'admin';
 ```
 
-## 步驟 8：部署網頁（階段 2 完成後適用）
+你自己也要當 Admin 的話，用同樣方式在 Users 建立帳號，再執行：
+
+```sql
+update public.members set app_role = 'admin' where lower(email) = lower('<你的信箱>');
+```
+
+### 6-4 產生邀請碼
+
+在網頁的管理介面完成前（階段 7），先在 SQL Editor 產生。**邀請碼原文只會顯示這一次，請立即複製給對方。**
+
+一般成員，單次使用，14 天內有效：
+
+```sql
+select public.create_invite_code();
+```
+
+指定職稱與備註，例如碩士新生：
+
+```sql
+select public.create_invite_code(p_position => 'master', p_note => '2026 新生');
+```
+
+限定只能由某個 Email 使用：
+
+```sql
+select public.create_invite_code(p_email => 'student@example.com');
+```
+
+一組碼給多人使用，例如 5 位專題生、7 天有效：
+
+```sql
+select public.create_invite_code(p_position => 'undergrad', p_max_uses => 5, p_expires_days => 7);
+```
+
+綁定已存在的成員資料。註冊後會連到這筆成員，不會多出一筆：
+
+```sql
+select public.create_invite_code(p_member_id => (select id from public.members where name = '林冠宇'));
+```
+
+唯讀帳號（校友、訪客）：
+
+```sql
+select public.create_invite_code(p_app_role => 'viewer');
+```
+
+查看與撤銷邀請碼（`code_hint` 是邀請碼的末 4 碼）：
+
+```sql
+select code_hint, note, app_role, position, email, used_count, max_uses, expires_at, revoked_at
+  from public.invite_codes order by created_at desc;
+```
+
+```sql
+update public.invite_codes set revoked_at = now() where code_hint = '<末 4 碼>';
+```
+
+成員拿到邀請碼後，在網頁的「註冊」頁輸入邀請碼、Email、密碼即可。註冊頁在階段 2 完成。
+
+### 6-5 忘記密碼
+
+因為沒有設定寄信，「忘記密碼」由 Admin 協助重設：
+- 階段 7 會在成員管理頁加上「重設密碼」按鈕。
+- 在那之前，可以在 SQL Editor 設定一組臨時密碼，再請成員登入後自行修改：
+
+```sql
+update auth.users set encrypted_password = extensions.crypt('<臨時密碼>', extensions.gen_salt('bf'))
+ where lower(email) = lower('<成員信箱>');
+```
+
+日後如果設定了 SMTP，也可以開放成員自行用 Email 重設密碼。
+
+## 步驟 7：部署網頁（階段 2 完成後適用）
 
 到 Supabase Dashboard → **Project Settings → API**（新版介面為 **API Keys**）取得：
 - Project URL
@@ -267,7 +352,7 @@ curl -I http://127.0.0.1:3000
 
 > 主機 RAM 不夠編譯時，可以在其他電腦編譯好再傳過去。在那台電腦先準備好同樣的 `.env`，然後執行 `docker compose build`，再執行 `docker save tllab-hub-web:latest | ssh <主機> docker load`。最後在主機上執行 `docker compose up -d`。
 
-## 步驟 9：Nginx 與 HTTPS
+## 步驟 8：Nginx 與 HTTPS
 
 18.04 內建的 Nginx 1.14 就夠用：
 
@@ -299,7 +384,7 @@ sudo certbot renew --dry-run
 
 申請前要確認兩件事：網域已在 DNS 指向這台主機，而且 80 port 能從校外連到。如果學校防火牆擋住校外連線，請找計中開通，或改用計中核發的憑證。
 
-完成後用瀏覽器開 `https://hub.example.edu.tw`，用 Google 帳號登入測試。
+完成後用瀏覽器開 `https://hub.example.edu.tw`，用步驟 6-3 建立的帳號登入測試。
 
 ---
 
@@ -369,19 +454,21 @@ DATABASE_URL='<新專案的連線字串>' scripts/db-restore.sh /opt/tllab/backu
 
 | 狀況 | 解法 |
 |---|---|
-| `node: ... version 'GLIBC_2.28' not found` | 主機上直接跑了 Node.js 18 以上版本，請改用 Docker（步驟 8） |
+| `node: ... version 'GLIBC_2.28' not found` | 主機上直接跑了 Node.js 18 以上版本，請改用 Docker（步驟 7） |
 | `db-apply.sh` 卡住或 `could not translate host name` | 用了 Direct connection（只支援 IPv6），改用 **Session pooler** 連線字串；或學校網路擋住 5432 port |
 | `password authentication failed` | 連線字串的密碼不對；密碼有特殊字元時要做 URL 編碼（例如 `@` → `%40`），或到 Database Settings 重設成只有英數字的密碼 |
 | 網站打不開，Dashboard 顯示 Paused | 免費專案 7 天沒有使用被暫停，在 Dashboard 按 Restore |
-| Google 登入出現 `redirect_uri_mismatch` | Google Console 的 redirect URI 必須完全等於 `https://<ref>.supabase.co/auth/v1/callback` |
-| 登入後跳到 `localhost:3000` | Supabase 的 Site URL／Redirect URLs 沒改成正式網址（步驟 6） |
-| 成員收不到 Email 登入信 | 還沒設定自訂 SMTP（步驟 6-3） |
+| 註冊時顯示「邀請碼無效、已過期或已使用完畢」 | 在 SQL Editor 查詢 `invite_codes` 的 `used_count`、`expires_at`、`revoked_at`；必要時重新產生 |
+| 成員忘記密碼 | 見步驟 6-5 |
+| 登入後跳到 `localhost:3000` | Supabase 的 Site URL／Redirect URLs 沒改成正式網址（步驟 6-1） |
 | 編譯時出現 `Killed` | RAM 不足，加 swap（步驟 1）或在別台電腦編譯 |
 | `docker pull` 逾時 | 學校網路需要 proxy：在 `/etc/systemd/system/docker.service.d/proxy.conf` 設定 `HTTP_PROXY`／`HTTPS_PROXY` 後重啟 Docker |
 
 ---
 
-## 附錄：Google 登入設定
+## 附錄：日後加入 Google 登入（可選）
+
+目前使用邀請碼註冊，不需要這一節。日後想讓成員也能用 Google 登入時，再依下列步驟設定，並在 Sign In / Providers 開啟 Google。
 
 1. 到 [Google Cloud Console](https://console.cloud.google.com/) 建立專案，再進入 **APIs & Services → OAuth consent screen**：
    - 學校有 Google Workspace，而且只給校內帳號登入：User type 選 **Internal**。
@@ -390,7 +477,7 @@ DATABASE_URL='<新專案的連線字串>' scripts/db-restore.sh /opt/tllab/backu
    - Authorized JavaScript origins：可以不填。Google 不接受內網 IP，而登入流程也用不到這個欄位。
    - Authorized redirect URIs：`https://<ref>.supabase.co/auth/v1/callback`
      （Supabase Dashboard → Authentication → Providers → Google 頁面上可直接複製這個網址）
-3. 把產生的 Client ID 與 Client Secret 填回 Supabase 的 Google provider（步驟 6-2）。
+3. 把產生的 Client ID 與 Client Secret 填回 Supabase 的 Google provider。
 
 ## 附錄：免費網址
 
@@ -433,7 +520,6 @@ hostname -I; curl -s https://ifconfig.me; echo
    - `.env` 的 `NEXT_PUBLIC_SITE_URL`。
    - Nginx 設定的 `server_name` 改成 `_`。
 
-   Google Cloud Console 的 redirect URI 不用改，因為它固定是 Supabase 的網址。
 
 ### DuckDNS（需要公開 IP）
 
@@ -444,7 +530,7 @@ hostname -I; curl -s https://ifconfig.me; echo
    */5 * * * * curl -s "https://www.duckdns.org/update?domains=tllab911&token=<token>&ip=" > /dev/null
    ```
 
-3. 確認校外連得到主機的 80/443 port 後，依步驟 9 用 certbot 申請憑證（`-d tllab911.duckdns.org`）。
+3. 確認校外連得到主機的 80/443 port 後，依步驟 8 用 certbot 申請憑證（`-d tllab911.duckdns.org`）。
 
 ## 開發者：本機測試 schema
 
