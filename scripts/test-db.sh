@@ -23,4 +23,21 @@ echo "→ 再次執行 db-apply（應全部略過）"
 "$ROOT/scripts/db-apply.sh"
 echo "→ tests"
 "${PSQL[@]}" -f "$ROOT/supabase/tests/rls_test.sql"
+echo "→ 備份 → 還原到空資料庫"
+export DATABASE_URL="postgresql://postgres@localhost:$PORT/postgres?host=$WORK"
+PG_DUMP_CMD="pg_dump" "$ROOT/scripts/db-backup.sh" "$WORK/backups"
+"${PSQL[@]}" -c "create database restore_test"
+"${PSQL[@]}" -d restore_test -c "alter database restore_test set search_path = public, extensions"
+"${PSQL[@]}" -d restore_test -f "$ROOT/supabase/tests/supabase_stub.sql" 2>/dev/null \
+  || "${PSQL[@]}" -d restore_test -f <(grep -v '^create role' "$ROOT/supabase/tests/supabase_stub.sql")
+PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d restore_test" "$ROOT/scripts/db-apply.sh" >/dev/null
+PSQL_CMD="psql -h $WORK -p $PORT -U postgres -d restore_test" \
+  "$ROOT/scripts/db-restore.sh" "$(ls "$WORK"/backups/tllab-*.dump)"
+for t in members projects tasks publications meetings activity_log page_settings task_assignees documents; do
+  a="$("${PSQL[@]}" -tA -c "select count(*) from public.$t")"
+  b="$("${PSQL[@]}" -d restore_test -tA -c "select count(*) from public.$t")"
+  [ "$a" = "$b" ] || { echo "✗ $t 筆數不符：$a vs $b"; exit 1; }
+done
+"${PSQL[@]}" -d restore_test -tA -c "select count(*) from public.members where user_id is not null" | grep -qx 0
+"${PSQL[@]}" -d restore_test -c "insert into public.tasks (title) values ('還原後可新增'); insert into public.activity_log (action, entity_type, entity_id) values ('insert','task',gen_random_uuid())"
 echo "✓ 全部通過"

@@ -18,6 +18,3 @@ services:
     # 只綁定本機，對外經由 Nginx（Docker 發布的連接埠會繞過 ufw）
     ports:
       - "127.0.0.1:3000:3000"
-    # 讓容器能以 host.docker.internal 連到主機上的自架 Supabase
-    extra_hosts:
-      - "host.docker.internal:host-gateway"

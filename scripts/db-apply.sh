@@ -2,11 +2,10 @@
 # 套用 supabase/migrations（已套用過的會跳過），可選擇一併載入示範資料。
 # 套用紀錄寫在 supabase_migrations.schema_migrations，與 Supabase CLI 相容。
 #
-# 用法（擇一指定連線方式）：
-#   DB_CONTAINER=supabase-db scripts/db-apply.sh [--seed]      # 自架 Supabase：直接進 db 容器執行
-#   DATABASE_URL=postgresql://... scripts/db-apply.sh [--seed]  # Supabase Cloud 或其他 PostgreSQL
+# 用法：
+#   DATABASE_URL='postgresql://...' scripts/db-apply.sh [--seed]
 #
-# 使用 DATABASE_URL 時，若有 Docker 會以 postgres:15-alpine 容器內的 psql 執行
+# 有 Docker 時會以 postgres:15-alpine 容器內的 psql 執行
 # （Ubuntu 18.04 內建 psql 10 版本過舊）；也可用 PSQL_CMD="psql ..." 自行指定。
 set -euo pipefail
 
@@ -16,8 +15,6 @@ SEED=false
 
 if [ -n "${PSQL_CMD:-}" ]; then
   read -r -a RUN <<< "$PSQL_CMD"
-elif [ -n "${DB_CONTAINER:-}" ]; then
-  RUN=(docker exec -i "$DB_CONTAINER" psql -U "${DB_USER:-postgres}" -d "${DB_NAME:-postgres}")
 elif [ -n "${DATABASE_URL:-}" ]; then
   if command -v docker >/dev/null 2>&1; then
     RUN=(docker run --rm -i --network host postgres:15-alpine psql "$DATABASE_URL")
@@ -25,7 +22,7 @@ elif [ -n "${DATABASE_URL:-}" ]; then
     RUN=(psql "$DATABASE_URL")
   fi
 else
-  echo "請設定 DB_CONTAINER 或 DATABASE_URL（見腳本開頭說明）" >&2
+  echo "請設定 DATABASE_URL（Supabase → Connect → Session pooler 連線字串）" >&2
   exit 1
 fi
 RUN+=(-v ON_ERROR_STOP=1 -q -X)
