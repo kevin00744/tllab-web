@@ -426,7 +426,14 @@ hostname -I; curl -s https://ifconfig.me; echo
    tailscale funnel status
    ```
 
-5. `tailscale funnel status` 會顯示網址，例如 `https://tllab-1112.<tailnet>.ts.net`。把它填到 Supabase 的 Site URL 與 Redirect URLs，以及 `.env` 的 `NEXT_PUBLIC_SITE_URL`。這個方式**不需要 certbot**。
+5. `tailscale funnel status` 會顯示網址，例如 `https://tllab-1112.<tailnet>.ts.net`。把它填到以下地方，這個方式**不需要 certbot**：
+   - Supabase → Authentication → URL Configuration：
+     - **Site URL**：`https://tllab-1112.<tailnet>.ts.net`
+     - **Redirect URLs**：`https://tllab-1112.<tailnet>.ts.net/**`。也可以保留 `http://<主機 IP>/**`，校內就能繼續用 IP 連線。
+   - `.env` 的 `NEXT_PUBLIC_SITE_URL`。
+   - Nginx 設定的 `server_name` 改成 `_`。
+
+   Google Cloud Console 的 redirect URI 不用改，因為它固定是 Supabase 的網址。
 
 ### DuckDNS（需要公開 IP）
 
