@@ -44,6 +44,14 @@
   --status-green-fg: oklch(0.45 0.12 155);
   --status-red-bg: oklch(0.94 0.04 25);
   --status-red-fg: oklch(0.5 0.18 27);
+
+  /* 論文階段（ordinal）：單一色相、由淺到深，已用 dataviz validate_palette.js --ordinal 驗證 */
+  --stage-1: #85abf0;
+  --stage-2: #6793eb;
+  --stage-3: #4a7ae4;
+  --stage-4: #3364db;
+  --stage-5: #244ecc;
+  --stage-6: #1c3cb2;
 }
 
 .dark {
@@ -82,6 +90,13 @@
   --status-green-fg: oklch(0.83 0.11 155);
   --status-red-bg: oklch(0.31 0.08 25);
   --status-red-fg: oklch(0.82 0.1 25);
+
+  --stage-1: #3153a0;
+  --stage-2: #3e66c1;
+  --stage-3: #4b7bdf;
+  --stage-4: #6193f1;
+  --stage-5: #7baafd;
+  --stage-6: #9bc2ff;
 }
 
 @theme inline {

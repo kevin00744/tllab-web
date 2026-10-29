@@ -9,6 +9,8 @@
 | `20261029000003_activity_search_views.sql` | 活動紀錄 trigger、全站搜尋 `search_all()`、Dashboard 檢視與 KPI、Action item → Task |
 | `20261029000004_storage.sql` | Storage buckets（`avatars`、`attachments`）與存取規則 |
 | `20261029000005_invite_codes.sql` | 邀請碼註冊（Email＋密碼）：邀請碼、使用紀錄與伺服器端註冊函式 |
+| `20261029000006_keep_author_names.sql` | 刪除成員時保留論文作者姓名 |
+| `20261029000007_dashboard.sql` | `get_dashboard()`：Dashboard 所需資料一次取回 |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -151,6 +153,7 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | 名稱 | 說明 |
 |---|---|
 | `search_all(q, max_results)` | 全站搜尋：成員、專案、任務、論文、會議、文件、FAQ、軟體、Pipelines；中英文部分比對，依相似度排序，遵守 RLS |
+| `get_dashboard(p_days)` | Dashboard 一次取回：KPI、我的任務（前 8 項）、專案進度、論文各階段數量與最新 3 篇、最近 3 場會議、下次會議、未來 14 天截止日；依呼叫者 RLS |
 | `dashboard_kpis()` | 進行中專案數、本週待辦任務數、逾期任務數、今年已發表數、投稿中（投稿＋審稿修改）數 |
 | `v_project_overview` | 每個專案的手動進度、任務總數／完成數／逾期數與任務完成率 |
 | `v_upcoming_deadlines` | 未完成任務＋尚未接受論文的截止日，含相關成員（Dashboard 取未來 14 天） |

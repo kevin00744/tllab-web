@@ -339,3 +339,60 @@ begin
     '作者姓名應保留';
   assert (select owner_id from projects where id = '20000000-0000-0000-0000-000000000002') is null;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Dashboard：get_dashboard()（以張家豪身分）
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';
+do $$
+declare
+  d jsonb := get_dashboard();
+  prev date;
+  item jsonb;
+begin
+  assert (d ->> 'today')::date = lab_today();
+  assert (d -> 'kpis' ->> 'active_projects')::int >= 1, 'KPI';
+  -- 我的任務：只含指派給自己、未完成，依截止日排序
+  assert jsonb_array_length(d -> 'my_tasks') >= 2, '我的任務';
+  assert not exists (
+    select 1 from jsonb_array_elements(d -> 'my_tasks') t
+     where not exists (select 1 from task_assignees ta
+                        where ta.task_id = (t ->> 'id')::uuid
+                          and ta.member_id = '10000000-0000-0000-0000-000000000005')
+        or t ->> 'status' = 'done'), '只能有自己未完成的任務';
+  for item in select * from jsonb_array_elements(d -> 'my_tasks') loop
+    if item ->> 'due_date' is not null then
+      assert prev is null or (item ->> 'due_date')::date >= prev, '依截止日排序';
+      prev := (item ->> 'due_date')::date;
+    end if;
+  end loop;
+  assert (d ->> 'my_open')::int >= jsonb_array_length(d -> 'my_tasks');
+  -- 專案：不含已完成；進行中排最前
+  assert not exists (select 1 from jsonb_array_elements(d -> 'projects') p where p ->> 'status' = 'completed');
+  assert d -> 'projects' -> 0 ->> 'status' = 'active', '進行中專案排前面';
+  -- 論文：六個階段依序
+  assert jsonb_array_length(d -> 'publication_stages') = 6;
+  assert d -> 'publication_stages' -> 0 ->> 'stage' = 'idea' and d -> 'publication_stages' -> 5 ->> 'stage' = 'published';
+  -- 會議：最近 3 筆過去會議（新到舊）＋下次會議
+  assert jsonb_array_length(d -> 'recent_meetings') = 3;
+  assert (d -> 'recent_meetings' -> 0 ->> 'starts_at')::timestamptz >= (d -> 'recent_meetings' -> 1 ->> 'starts_at')::timestamptz;
+  assert (d -> 'next_meeting' ->> 'starts_at')::timestamptz > now(), '下次會議';
+  -- 截止日：未來 14 天內、含任務與論文
+  assert not exists (select 1 from jsonb_array_elements(d -> 'deadlines') x
+                      where (x ->> 'due_date')::date not between lab_today() and lab_today() + 13);
+  assert exists (select 1 from jsonb_array_elements(d -> 'deadlines') x where x ->> 'kind' = 'publication');
+  assert exists (select 1 from jsonb_array_elements(d -> 'deadlines') x where (x ->> 'mine')::boolean);
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- anon 不可呼叫
+set role anon;
+do $$
+begin
+  perform get_dashboard();
+  raise exception 'anon 不應可呼叫 get_dashboard';
+exception when insufficient_privilege then null;
+end $$;
+reset role;
