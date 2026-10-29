@@ -326,3 +326,16 @@ begin
   reset role;
   assert (select used_count from invite_codes where id = v_invite) = 0, '失敗時應歸還次數';
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 刪除成員：保留論文作者姓名，關聯欄位設為 null
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  delete from members where id = '10000000-0000-0000-0000-000000000004';  -- 王詩涵（論文作者、專案負責人）
+  assert exists (select 1 from publication_authors
+                  where publication_id = '30000000-0000-0000-0000-000000000002'
+                    and author_order = 1 and member_id is null and display_name = 'Shih-Han Wang'),
+    '作者姓名應保留';
+  assert (select owner_id from projects where id = '20000000-0000-0000-0000-000000000002') is null;
+end $$;
