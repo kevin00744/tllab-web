@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { deleteMeeting, saveMeeting, type MeetingInput } from "@/app/(app)/meetings/actions";
 import { Field } from "@/components/common/field";
 import { FormBody, FormDialog } from "@/components/common/form-dialog";
+import { LinksEditor } from "@/components/common/links-editor";
+import { hasInvalidLink } from "@/lib/links";
 import { MarkdownField } from "@/components/common/markdown-field";
 import { MemberPicker } from "@/components/common/member-picker";
 import { Button } from "@/components/ui/button";
@@ -67,6 +69,7 @@ function MeetingForm({ meeting, options, today, onDone }: { meeting: MeetingDeta
     end: meeting?.ends_at ? labTimeOf(meeting.ends_at) : meeting ? "" : "16:00",
     location: meeting?.location ?? "",
     decisions: meeting?.decisions ?? "",
+    links: meeting?.links ?? [],
     attendee_ids: meeting?.attendees.map((a) => a.id) ?? [],
     presenter_ids: meeting?.attendees.filter((a) => a.is_presenter).map((a) => a.id) ?? [],
     project_ids: meeting?.projects.map((p) => p.id) ?? [],
@@ -101,9 +104,11 @@ function MeetingForm({ meeting, options, today, onDone }: { meeting: MeetingDeta
         if (!form.title.trim()) return setError(t.errors.titleRequired);
         if (!form.date || !form.start) return setError(t.errors.dateRequired);
         if (form.end && form.end < form.start) return setError(t.errors.dateOrder);
+        if (hasInvalidLink(form.links)) return setError(t.softwarePage.urlInvalid);
         const { date, start, end, attendee_ids, presenter_ids, ...rest } = form;
         const input: MeetingInput = {
           ...rest,
+          links: rest.links.filter((l) => l.url.trim()),
           starts_at: labIso(date, start),
           ends_at: end ? labIso(date, end) : "",
           attendees: attendee_ids.map((id) => ({ member_id: id, is_presenter: presenter_ids.includes(id) })),
@@ -208,6 +213,7 @@ function MeetingForm({ meeting, options, today, onDone }: { meeting: MeetingDeta
           ))}
         </div>
       </div>
+      <LinksEditor label={m.links} value={form.links} onChange={(links) => set("links", links)} labelPlaceholder={m.linkLabelPlaceholder} />
       <MarkdownField id="mt-decisions" label={m.decisions} value={form.decisions} onChange={(v) => set("decisions", v)} rows={4} />
     </FormBody>
   );

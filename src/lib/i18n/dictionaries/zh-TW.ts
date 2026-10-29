@@ -506,6 +506,8 @@ const zhTW = {
     noNotes: "還沒有會議紀錄",
     notesPlaceholder: "點這裡開始記錄（支援 Markdown，也可以直接貼上）",
     decisions: "決議事項",
+    links: "相關連結",
+    linkLabelPlaceholder: "例如：投影片",
     noDecisions: "沒有決議事項",
     actions: "Action items",
     noActions: "沒有 Action items",

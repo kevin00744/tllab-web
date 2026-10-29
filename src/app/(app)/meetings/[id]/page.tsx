@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarIcon, ChevronLeftIcon, MapPinIcon } from "lucide-react";
+import { CalendarIcon, ChevronLeftIcon, ExternalLinkIcon, MapPinIcon } from "lucide-react";
+
 
 import { MemberAvatar } from "@/components/layout/user-menu";
 import { Markdown } from "@/components/markdown";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { getFormOptions, getMeeting, isUuid } from "@/lib/data";
 import { formatDateTime, labDateOf, labTimeOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
+import { linkText } from "@/lib/links";
 
 export async function generateMetadata({ params }: PageProps<"/meetings/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -80,6 +82,23 @@ export default async function MeetingDetailPage({ params }: PageProps<"/meetings
           </section>
         </div>
         <aside className="grid gap-4">
+          {meeting.links.length ? (
+            <section className="rounded-xl border px-4 py-3" aria-labelledby="mt-links">
+              <h2 id="mt-links" className="mb-2 text-sm font-semibold">
+                {m.links}
+              </h2>
+              <ul className="grid gap-1.5 text-sm" data-testid="meeting-links">
+                {meeting.links.map((l, i) => (
+                  <li key={i}>
+                    <a href={l.url} target="_blank" rel="noreferrer noopener" className="inline-flex max-w-full items-center gap-1.5 text-primary hover:underline">
+                      <ExternalLinkIcon className="size-3.5 shrink-0" />
+                      <span className="truncate">{linkText(l)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
           <section className="rounded-xl border px-4 py-3">
             <h2 className="mb-2 text-sm font-semibold">
               {m.attendees} <span className="font-normal text-muted-foreground">{meeting.attendees.length}</span>

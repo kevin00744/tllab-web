@@ -16,6 +16,7 @@
 | `20261029000010_members_api.sql` | 成員列表／個人頁／編輯／刪除 API、邀請碼列表與撤銷（階段 5） |
 | `20261029000011_system_admin.sql` | 系統管理員 `members.is_system_admin`（預設給 PI）：管理員的身分只有系統管理員能變更 |
 | `20261029000013_resources_api.sql` | Resources API（階段 6）：文件、FAQ、軟體、Pipelines、會議與 Action items；`documents.content_version`、`meetings.summary_version` |
+| `20261029000014_meeting_links.sql` | 會議相關連結 `meetings.links`（`[{label, url}]`，只保留 http(s) 網址、最多 20 筆） |
 | `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 

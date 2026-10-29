@@ -508,6 +508,8 @@ const en: Dictionary = {
     noNotes: "No notes yet",
     notesPlaceholder: "Click here to start taking notes (Markdown, paste works too)",
     decisions: "Decisions",
+    links: "Links",
+    linkLabelPlaceholder: "e.g. Slides",
     noDecisions: "No decisions",
     actions: "Action items",
     noActions: "No action items",

@@ -1,12 +1,13 @@
 "use client";
 
-import { PencilIcon, PlusIcon, Trash2Icon, UploadIcon, XIcon } from "lucide-react";
+import { PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { saveMember, type MemberInput } from "@/app/(app)/members/actions";
 import { Field } from "@/components/common/field";
+import { LinksEditor } from "@/components/common/links-editor";
 import { MemberAvatar } from "@/components/layout/user-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -223,34 +224,7 @@ function MemberForm({
                 <Input id="m-aff" value={form.current_affiliation} onChange={(e) => set("current_affiliation", e.target.value)} />
               </Field>
             </div>
-            <div className="grid gap-2">
-              <span className="text-sm font-medium">{t.membersPage.links}</span>
-              {form.links.map((l, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input
-                    aria-label={t.membersPage.linkLabel}
-                    placeholder={t.membersPage.linkLabel}
-                    value={l.label}
-                    className="w-32"
-                    onChange={(e) => set("links", form.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-                  />
-                  <Input
-                    aria-label={t.membersPage.linkUrl}
-                    placeholder="https://"
-                    value={l.url}
-                    onChange={(e) => set("links", form.links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))}
-                  />
-                  <Button type="button" size="icon" variant="ghost" aria-label={t.fields.remove} onClick={() => set("links", form.links.filter((_, j) => j !== i))}>
-                    <XIcon />
-                  </Button>
-                </div>
-              ))}
-              <div>
-                <Button type="button" size="sm" variant="outline" onClick={() => set("links", [...form.links, { label: "", url: "" }])}>
-                  <PlusIcon /> {t.membersPage.addLink}
-                </Button>
-              </div>
-            </div>
+            <LinksEditor label={t.membersPage.links} value={form.links} onChange={(links) => set("links", links)} />
 
             {isAdmin ? (
               <fieldset disabled={locked} className="grid gap-4 rounded-lg border border-dashed p-3" data-testid="admin-fields">

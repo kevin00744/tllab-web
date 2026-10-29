@@ -931,3 +931,25 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- 會議連結（migration 14）
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪（出席者）
+do $$
+declare
+  j jsonb;
+begin
+  perform save_meeting((get_meeting('40000000-0000-0000-0000-000000000001') - 'attendees') || jsonb_build_object('links', jsonb_build_array(
+    jsonb_build_object('label', ' 投影片 ', 'url', 'https://docs.google.com/presentation/d/abc'),
+    jsonb_build_object('label', '', 'url', 'https://youtu.be/xyz'),
+    jsonb_build_object('label', '壞連結', 'url', 'javascript:alert(1)'))));
+  j := get_meeting('40000000-0000-0000-0000-000000000001') -> 'links';
+  assert jsonb_array_length(j) = 2, j::text;
+  assert j -> 0 ->> 'label' = '投影片' and j -> 1 ->> 'url' = 'https://youtu.be/xyz';
+  -- 沒有送 links 時保留原本的連結
+  perform save_meeting(get_meeting('40000000-0000-0000-0000-000000000001') - 'links' - 'attendees');
+  assert jsonb_array_length(get_meeting('40000000-0000-0000-0000-000000000001') -> 'links') = 2;
+  assert jsonb_array_length((list_meetings('{"q":"AO 系統進度"}') -> 0) -> 'links') = 2;
+end $$;
+reset role;
+reset request.jwt.claim.sub;

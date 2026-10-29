@@ -14,6 +14,7 @@ export type MeetingInput = {
   ends_at: string;
   location: string;
   decisions: string;
+  links: { label: string; url: string }[];
   attendees: { member_id: string; is_presenter: boolean }[];
   project_ids: string[];
 };

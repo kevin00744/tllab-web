@@ -236,6 +236,7 @@ export type Meeting = Permission & {
   action_total: number;
   action_open: number;
   has_notes: boolean;
+  links: { label: string; url: string }[];
 };
 export type ActionItem = {
   id: string;

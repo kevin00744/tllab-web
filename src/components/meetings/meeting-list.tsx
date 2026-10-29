@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileTextIcon, ListChecksIcon, MapPinIcon } from "lucide-react";
+import { FileTextIcon, LinkIcon, ListChecksIcon, MapPinIcon } from "lucide-react";
 
 import { AvatarStack } from "@/components/common/avatar-stack";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,12 @@ export function MeetingList({ meetings, t, locale }: { meetings: Meeting[]; t: D
             </div>
             <div className="hidden shrink-0 items-center gap-3 text-xs text-muted-foreground sm:flex">
               {m.has_notes ? <FileTextIcon className="size-4" aria-label={t.meetingsPage.hasNotes} /> : null}
+              {m.links.length ? (
+                <span className="inline-flex items-center gap-0.5" title={t.meetingsPage.links}>
+                  <LinkIcon className="size-4" />
+                  {m.links.length}
+                </span>
+              ) : null}
               {m.action_total ? (
                 <span className="inline-flex items-center gap-1" title={t.meetingsPage.actions}>
                   <ListChecksIcon className="size-4" />
