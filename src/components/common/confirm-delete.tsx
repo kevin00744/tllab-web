@@ -16,7 +16,15 @@ import {
 import { format } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n/client";
 
-export function ConfirmDelete({ name, onConfirm }: { name: string; onConfirm: () => Promise<boolean> }) {
+export function ConfirmDelete({
+  name,
+  onConfirm,
+  trigger,
+}: {
+  name: string;
+  onConfirm: () => Promise<boolean>;
+  trigger?: React.ReactNode;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -24,9 +32,11 @@ export function ConfirmDelete({ name, onConfirm }: { name: string; onConfirm: ()
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="ghost" className="text-destructive hover:text-destructive sm:mr-auto">
-          <Trash2Icon /> {t.common.delete}
-        </Button>
+        {trigger ?? (
+          <Button type="button" variant="ghost" className="text-destructive hover:text-destructive sm:mr-auto">
+            <Trash2Icon /> {t.common.delete}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-sm" closeLabel={t.common.close}>
         <DialogHeader>

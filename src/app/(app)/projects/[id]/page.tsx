@@ -6,6 +6,8 @@ import { ChevronLeftIcon } from "lucide-react";
 import { AvatarStack } from "@/components/common/avatar-stack";
 import { EmptyBlock } from "@/components/common/field";
 import { ProjectDialog } from "@/components/projects/project-dialog";
+import { ProjectDoc } from "@/components/projects/project-doc";
+import { ProjectFiles } from "@/components/projects/project-files";
 import { ProgressMeter } from "@/components/projects/project-views";
 import { PublicationProvider } from "@/components/publications/publication-provider";
 import { PublicationsTable } from "@/components/publications/publication-views";
@@ -63,13 +65,17 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
         <ProjectDialog project={project} options={options} />
       </div>
 
-      <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
+      <div className="mb-8 grid items-start gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="min-w-0">
           {project.description ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{project.description}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">—</p>
-          )}
+            <p className="mb-4 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{project.description}</p>
+          ) : null}
+          <ProjectDoc
+            projectId={project.id}
+            content={project.content}
+            version={project.content_version}
+            editable={project.editable}
+          />
         </div>
         <div className="rounded-xl border px-4 py-3">
           <Info label={t.fields.owner}>{project.owner?.name ?? "—"}</Info>
@@ -96,6 +102,8 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
           ) : null}
         </div>
       </div>
+
+      <ProjectFiles projectId={project.id} files={project.files} editable={project.editable} />
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">

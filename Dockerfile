@@ -29,8 +29,11 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     TZ=Asia/Taipei
-RUN apk add --no-cache tzdata \
+# LibreOffice：把進度報告 PPT/PPTX 轉成 PDF 供預覽（中文需要 Noto CJK 字型）
+RUN apk add --no-cache tzdata libreoffice font-noto font-noto-cjk \
  && addgroup -S -g 1001 nodejs && adduser -S -u 1001 -G nodejs nextjs
+ENV SOFFICE_PATH=/usr/bin/soffice \
+    HOME=/tmp
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

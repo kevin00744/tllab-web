@@ -22,7 +22,7 @@ TL Lab（Lab 911）內部使用的網頁系統，取代原本 Notion 上的實�
 | 8 | 從 Notion 匯入資料（CSV／Markdown） | ⏳ |
 | 9 | 共同編輯行事曆、個人化 Dashboard（依個人資料決定顯示哪些區塊） | ⏳ |
 
-> 目前完成到階段 4：登入／邀請碼註冊、側邊欄、中英文、深淺色、Dashboard，以及專案（表格／看板／甘特圖／詳細頁）、任務（可拖拉看板／清單／月曆，篩選我的／逾期／專案／成員）、論文追蹤（看板／表格／年度統計圖，作者可連結成員）。
+> 目前完成到階段 4：登入／邀請碼註冊、側邊欄、中英文、深淺色、Dashboard，以及專案（表格／看板／甘特圖／詳細頁）、任務（可拖拉看板／清單／月曆，篩選我的／逾期／專案／成員）、論文追蹤（看板／表格／年度統計圖，作者可連結成員）。專案頁面另有類 Notion 的 Markdown 本文（點擊即編輯、自動儲存）與進度報告簡報上傳（PPT/PPTX 自動轉 PDF，網頁內逐頁預覽）。
 
 ## 專案結構
 
@@ -388,6 +388,8 @@ curl http://127.0.0.1:3000/api/health
 
 `NEXT_PUBLIC_*` 會在編譯時寫入網頁，修改後要重新執行 `docker compose up -d --build`。
 
+> 網頁映像內含 LibreOffice 與中文字型（用來把進度報告 PPT 轉成 PDF 預覽），映像約 1 GB，第一次編譯需多花幾分鐘下載。檔案存在 Supabase Storage（免費方案共 1 GB、單檔 50 MB）。
+
 > 主機 RAM 不夠編譯時，可以在其他電腦編譯好再傳過去。在那台電腦先準備好同樣的 `.env`，然後執行 `docker compose build`，再執行 `docker save tllab-hub-web:latest | ssh <主機> docker load`。最後在主機上執行 `docker compose up -d`。
 
 ## 步驟 8：Nginx 與 HTTPS
@@ -501,6 +503,7 @@ DATABASE_URL='<新專案的連線字串>' scripts/db-restore.sh /opt/tllab/backu
 | 註冊時顯示「邀請碼無效、已過期或已使用完畢」 | 在 SQL Editor 查詢 `invite_codes` 的 `used_count`、`expires_at`、`revoked_at`；必要時重新產生 |
 | 成員忘記密碼 | 見步驟 6-5 |
 | 登入後跳到 `localhost:3000` | Supabase 的 Site URL／Redirect URLs 沒改成正式網址（步驟 6-1） |
+| 簡報上傳後顯示「無法產生預覽」 | 確認容器內有 LibreOffice：`docker compose exec web soffice --version`；查看 `docker compose logs web` 中的 `slide conversion failed` 訊息。PDF 檔不需轉換 |
 | 編譯時出現 `Killed` | RAM 不足，加 swap（步驟 1）或在別台電腦編譯 |
 | `docker pull` 逾時 | 學校網路需要 proxy：在 `/etc/systemd/system/docker.service.d/proxy.conf` 設定 `HTTP_PROXY`／`HTTPS_PROXY` 後重啟 Docker |
 

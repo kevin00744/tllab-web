@@ -169,3 +169,108 @@
     font-feature-settings: "palt" 0;
   }
 }
+
+/* -----------------------------------------------------------------------------
+ * Markdown 內容（顯示與編輯器共用，類 Notion 排版）
+ * -------------------------------------------------------------------------- */
+@layer components {
+  .md {
+    @apply text-[15px] leading-7 break-words;
+  }
+  .md > :first-child {
+    @apply mt-0;
+  }
+  .md h1 {
+    @apply mt-8 mb-2 text-2xl leading-tight font-semibold;
+  }
+  .md h2 {
+    @apply mt-6 mb-1.5 text-xl leading-snug font-semibold;
+  }
+  .md h3 {
+    @apply mt-5 mb-1 text-base font-semibold;
+  }
+  .md p {
+    @apply my-1.5;
+  }
+  .md a {
+    @apply text-primary underline underline-offset-2;
+  }
+  .md ul {
+    @apply my-1.5 list-disc pl-6;
+  }
+  .md ol {
+    @apply my-1.5 list-decimal pl-6;
+  }
+  .md li > p {
+    @apply my-0.5;
+  }
+  .md blockquote {
+    @apply my-2 border-l-[3px] border-foreground/30 pl-4 text-muted-foreground;
+  }
+  .md hr {
+    @apply my-6 border-border;
+  }
+  .md code {
+    @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+  }
+  .md pre {
+    @apply my-3 overflow-x-auto rounded-lg bg-muted px-4 py-3 text-[13px] leading-6;
+  }
+  .md pre code {
+    @apply bg-transparent p-0 text-inherit;
+  }
+  .md table {
+    @apply my-3 block w-full overflow-x-auto border-collapse text-sm;
+  }
+  .md th,
+  .md td {
+    @apply border px-3 py-1.5 text-left align-top;
+  }
+  .md th {
+    @apply bg-muted/60 font-medium;
+  }
+  /* 待辦清單：GFM（顯示）與 Tiptap（編輯）兩種結構 */
+  /* remark-gfm 會加上 task-list-item；與一般項目混在同一清單時也要拿掉項目符號 */
+  .md li.task-list-item {
+    @apply -ml-5 list-none;
+  }
+  .md li.task-list-item input[type="checkbox"] {
+    @apply mr-2 translate-y-px accent-primary;
+  }
+  .md ul[data-type="taskList"] {
+    @apply list-none;
+  }
+  .md ul[data-type="taskList"] {
+    @apply pl-1;
+  }
+  .md ul[data-type="taskList"] li {
+    @apply flex items-start gap-2;
+  }
+  .md ul[data-type="taskList"] li > label {
+    @apply mt-[5px] shrink-0 select-none;
+  }
+  .md ul[data-type="taskList"] li > label input {
+    @apply accent-primary;
+  }
+  .md ul[data-type="taskList"] li > div {
+    @apply min-w-0 flex-1;
+  }
+  .md ul[data-type="taskList"] li[data-checked="true"] > div {
+    @apply text-muted-foreground line-through;
+  }
+
+  /* 編輯器 */
+  .md.ProseMirror {
+    @apply min-h-24 outline-none;
+  }
+  .md.ProseMirror p.is-empty::before,
+  .md.ProseMirror h1.is-empty::before,
+  .md.ProseMirror h2.is-empty::before,
+  .md.ProseMirror h3.is-empty::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none float-left h-0 text-muted-foreground/70;
+  }
+  .md.ProseMirror .selectedCell {
+    @apply bg-primary/10;
+  }
+}

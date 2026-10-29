@@ -32,5 +32,5 @@ function redirectWithCookies(url: URL, from: NextResponse) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|api/health|favicon.ico|icon.svg|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/health|pdfjs/|favicon.ico|icon.svg|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

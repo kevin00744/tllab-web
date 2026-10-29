@@ -29,7 +29,25 @@ export type Project = {
   deletable: boolean;
 };
 
+export type Attachment = {
+  id: string;
+  kind: "slides" | "file";
+  title: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_path: string;
+  preview_path: string | null;
+  preview_error: string | null;
+  created_at: string;
+  uploaded_by: MemberBrief | null;
+  deletable: boolean;
+};
+
 export type ProjectDetail = Project & {
+  content: string;
+  content_version: number;
+  files: Attachment[];
   tasks: Task[];
   publications: Publication[];
   meetings: { id: string; title: string; emoji: string; type: MeetingType; starts_at: string }[];

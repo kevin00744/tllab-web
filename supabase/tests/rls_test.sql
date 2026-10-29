@@ -522,3 +522,83 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- ---------------------------------------------------------------------------
+-- 專案文件（attachments）
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪：AO 專案負責人
+do $$
+declare j jsonb;
+begin
+  insert into attachments (entity_type, entity_id, storage_path, file_name, kind, size_bytes, uploaded_by)
+  values ('project', '20000000-0000-0000-0000-000000000001', 'project/20000000-0000-0000-0000-000000000001/a.pptx',
+          'notes.pptx', 'slides', 120, current_member_id());
+  j := list_attachments('project', '20000000-0000-0000-0000-000000000001');
+  assert jsonb_array_length(j) = 1 and (j -> 0 ->> 'deletable')::boolean and j -> 0 ->> 'title' = 'notes.pptx';
+  -- 無權限的專案不可上傳
+  begin
+    insert into attachments (entity_type, entity_id, storage_path, file_name, kind, uploaded_by)
+    values ('project', '20000000-0000-0000-0000-000000000002', 'project/20000000-0000-0000-0000-000000000002/x.pdf',
+            'x.pdf', 'slides', current_member_id());
+    raise exception '不應可上傳到無權限專案';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into attachments (entity_type, entity_id, storage_path, file_name, kind, uploaded_by)
+    values ('project', '20000000-0000-0000-0000-000000000001', 'p/y.bin', 'y.bin', 'video', current_member_id());
+    raise exception 'kind 應受限制';
+  exception when check_violation then null;
+  end;
+end $$;
+
+-- 其他成員看得到、但不可刪除
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000006';
+do $$
+declare n int;
+begin
+  assert not (list_attachments('project', '20000000-0000-0000-0000-000000000001') -> 0 ->> 'deletable')::boolean;
+  delete from attachments where file_name = 'notes.pptx';
+  get diagnostics n = row_count;
+  assert n = 0, '非上傳者不可刪除';
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+-- ---------------------------------------------------------------------------
+-- 專案頁面內容：自動儲存、同時編輯偵測、活動紀錄合併
+-- ---------------------------------------------------------------------------
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';
+do $$
+declare
+  v int;
+  n_before int;
+  long text := repeat('長', 500);
+begin
+  v := (get_project('20000000-0000-0000-0000-000000000001') ->> 'content_version')::int;
+  assert (get_project('20000000-0000-0000-0000-000000000001') -> 'files') is not null, '詳細頁含檔案';
+  select count(*) into n_before from activity_log where entity_id = '20000000-0000-0000-0000-000000000001';
+  v := save_project_content('20000000-0000-0000-0000-000000000001', '# 第一版', v);
+  v := save_project_content('20000000-0000-0000-0000-000000000001', '# 第二版' || long, v);
+  assert (select content from projects where id = '20000000-0000-0000-0000-000000000001') like '# 第二版%';
+  assert (select count(*) from activity_log where entity_id = '20000000-0000-0000-0000-000000000001') <= n_before + 1,
+    '連續修改應合併為一筆';
+  assert (select length(changes -> 'content' ->> 'new') from activity_log
+           where entity_id = '20000000-0000-0000-0000-000000000001' order by created_at desc limit 1) <= 301,
+    '長文字應截短';
+  -- 用舊版本號儲存 → 衝突
+  begin
+    perform save_project_content('20000000-0000-0000-0000-000000000001', 'stale', v - 1);
+    raise exception '應偵測到衝突';
+  exception when serialization_failure then null;
+  end;
+  -- 無權限
+  begin
+    perform save_project_content('20000000-0000-0000-0000-000000000002', 'x', 0);
+    raise exception '無權限';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;

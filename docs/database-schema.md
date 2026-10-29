@@ -12,6 +12,7 @@
 | `20261029000006_keep_author_names.sql` | 刪除成員時保留論文作者姓名 |
 | `20261029000007_dashboard.sql` | `get_dashboard()`：Dashboard 所需資料一次取回 |
 | `20261029000008_projects_tasks_publications_api.sql` | 專案／任務／論文的讀寫函式（網頁一律經由這些函式存取，權限仍由 RLS 決定） |
+| `20261029000009_project_files.sql` | 專案頁面本文（Markdown，含版本號偵測同時編輯）、進度報告簡報附件、活動紀錄合併與截短 |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
 ## ER 圖
@@ -88,8 +89,8 @@ erDiagram
 
 | 資料表 | 用途 |
 |---|---|
-| `attachments` | 圖片與附件的中繼資料；實體檔案在 Storage `attachments` bucket，路徑 `{entity_type}/{entity_id}/{檔名}` |
-| `activity_log` | 誰（`actor_id`）在何時對哪筆資料做了什麼（`insert` / `update` / `delete`），`changes` 記錄欄位新舊值 |
+| `attachments` | 附件中繼資料；實體檔案在 Storage `attachments` bucket，路徑 `{entity_type}/{entity_id}/{uuid}.{ext}`。`kind = slides` 為進度報告，PPT/PPTX 由網頁伺服器以 LibreOffice 轉成 PDF（`preview_path`） |
+| `activity_log` | 誰（`actor_id`）在何時對哪筆資料做了什麼（`insert` / `update` / `delete`），`changes` 記錄欄位新舊值；同一人 10 分鐘內的連續修改合併為一筆，長文字只保留前 300 字 |
 | `page_settings` | 側邊欄各模組頁的 emoji 與中英文標題（Admin 可改）；個別資料列則各自有 `emoji` 欄位 |
 | `invite_codes` | 邀請碼：只存 SHA-256 雜湊與末 4 碼；預設權限、職稱、限定 Email、綁定既有成員、可用次數、有效期限、撤銷 |
 | `invite_redemptions` | 邀請碼使用紀錄（誰、何時、哪組碼） |
@@ -169,6 +170,8 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `list_publications(filter)` | 篩選：`stage`、`type`、`project_id`、`member_id`（作者）、`year`、`q` |
 | `save_publication(p)` / `delete_publication(id)` | 論文與有序作者清單（成員或外部作者、第一／通訊作者） |
 | `publication_year_stats()` | 各年度已發表數（依類型）與投稿數 |
+| `save_project_content(id, content, version)` | 專案頁面自動儲存；版本不符回 40001（他人已先儲存），不會覆蓋 |
+| `list_attachments(entity_type, entity_id)` | 附件列表（上傳者、是否可刪除、PDF 預覽路徑） |
 | `create_invite_code(...)` | 產生邀請碼（Admin），回傳原文一次 |
 | `claim_invite_code` / `release_invite_code` / `complete_invite_signup` | 邀請碼註冊流程（僅 service_role） |
 
