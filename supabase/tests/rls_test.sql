@@ -1417,3 +1417,75 @@ begin
 end $$;
 reset role;
 reset request.jwt.claim.sub;
+
+-- =============================================================================
+-- 留言板
+-- =============================================================================
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 張家豪（member）
+do $$
+declare
+  v_post uuid; v_reply uuid; v_nested uuid; j jsonb;
+begin
+  v_post := save_board_post(jsonb_build_object('body',
+    '@[陳怡君](10000000-0000-0000-0000-000000000002) 請看 #[自適應光學光片顯微鏡](20000000-0000-0000-0000-000000000001) 的進度，'
+    || '@[不存在](00000000-0000-0000-0000-000000000000)'));
+  assert (select count(*) from board_post_mentions where post_id = v_post) = 1, '只記錄存在的成員';
+  assert (select count(*) from board_post_projects where post_id = v_post) = 1, '標註專案';
+  begin perform save_board_post('{"body":"   "}'); raise exception 'x';
+  exception when invalid_parameter_value then null; end;
+  -- 回覆的回覆掛到主留言
+  v_reply := save_board_post(jsonb_build_object('parent_id', v_post, 'body', '收到'));
+  v_nested := save_board_post(jsonb_build_object('parent_id', v_reply, 'body', '再回覆'));
+  assert (select parent_id from board_posts where id = v_nested) = v_post, '只有一層回覆';
+  j := list_board('{}');
+  assert j -> 0 ->> 'id' = v_post::text and jsonb_array_length(j -> 0 -> 'replies') = 2;
+  assert (j -> 0 ->> 'editable')::boolean and j -> 0 -> 'author' ->> 'name' = '張家豪';
+  assert jsonb_array_length(list_board('{"project_id":"20000000-0000-0000-0000-000000000001"}')) = 1, '依專案篩選';
+  assert jsonb_array_length(list_board('{"project_id":"20000000-0000-0000-0000-000000000002"}')) = 0;
+  -- 修改：重新同步標註
+  perform save_board_post(jsonb_build_object('id', v_post, 'body', '改成不標註'));
+  assert not exists (select 1 from board_post_mentions where post_id = v_post) and (select edited from board_posts where id = v_post);
+  perform save_board_post(jsonb_build_object('id', v_post, 'body',
+    '@[陳怡君](10000000-0000-0000-0000-000000000002) #[自適應光學光片顯微鏡](20000000-0000-0000-0000-000000000001)'));
+end $$;
+
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000013';  -- 楊子豪（viewer）也可以留言
+do $$
+declare v_post uuid := (select id from board_posts where parent_id is null order by created_at desc limit 1);
+begin
+  perform save_board_post(jsonb_build_object('parent_id', v_post, 'body', '校友也可以回覆'));
+  assert jsonb_array_length(list_board('{"mine":true}')) = 1, '我回覆過的討論串';
+  begin perform save_board_post(jsonb_build_object('id', v_post, 'body', '改別人的')); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  begin perform delete_board_post(v_post); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+  assert not (list_board('{}') -> 0 ->> 'editable')::boolean;
+end $$;
+
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';  -- 陳怡君（admin，被提及）
+do $$
+declare j jsonb := list_board('{"mine":true}');
+begin
+  assert jsonb_array_length(j) = 1 and (j -> 0 ->> 'mentions_me')::boolean, '提及我';
+  assert (j -> 0 ->> 'deletable')::boolean, 'Admin 可刪除';
+  -- 分頁
+  perform save_board_post('{"body":"第二則"}');
+  assert jsonb_array_length(list_board('{"limit":1}')) = 1;
+  assert list_board(jsonb_build_object('before', list_board('{"limit":1}') -> 0 ->> 'id', 'limit', 5)) -> 0 ->> 'body' like '@[陳怡君]%';
+  perform delete_board_post((j -> 0 ->> 'id')::uuid);
+  assert not exists (select 1 from board_posts where body like '%校友也可以回覆%'), '刪除主留言連同回覆';
+  assert save_dashboard_prefs('{"order":["board","kpis"]}') -> 'order' = '["board","kpis"]';
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+
+set role anon;
+do $$
+begin
+  begin perform list_board('{}'); raise exception 'anon 不應可讀留言板';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from board_posts; raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;

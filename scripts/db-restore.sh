@@ -28,7 +28,7 @@ fi
 TABLES="members projects project_members publications publication_authors meetings meeting_attendees
 meeting_projects tasks task_assignees action_items documents faqs software_tools pipelines pipeline_steps
 attachments page_settings activity_log invite_codes invite_redemptions calendar_events calendar_event_members
-member_preferences"
+member_preferences board_posts board_post_mentions board_post_projects"
 
 existing="$("${PSQL[@]}" -X -tA -c 'select count(*) from public.members')"
 if [ "$existing" != "0" ]; then

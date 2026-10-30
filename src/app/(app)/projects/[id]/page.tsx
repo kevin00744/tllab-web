@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeftIcon } from "lucide-react";
 
 import { RecentActivity } from "@/components/activity/recent-activity";
+import { MessageBoard } from "@/components/board/message-board";
 import { AvatarStack } from "@/components/common/avatar-stack";
 import { EmptyBlock } from "@/components/common/field";
 import { ProjectDialog } from "@/components/projects/project-dialog";
@@ -16,7 +17,7 @@ import { NewTaskButton, TaskProvider } from "@/components/tasks/task-provider";
 import { TasksList } from "@/components/tasks/tasks-list";
 import { Badge } from "@/components/ui/badge";
 import { getUserId } from "@/lib/auth";
-import { getFormOptions, getProject, isUuid } from "@/lib/data";
+import { boardOptions, getFormOptions, getProject, isUuid, listBoardThreads } from "@/lib/data";
 import { formatDate, formatDateTime, labDateOf } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
@@ -43,6 +44,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   if (!isUuid(id)) notFound();
   const [{ locale, t }, options, project, signedIn] = await Promise.all([getI18n(), getFormOptions(), getProject(id), getUserId()]);
   if (!project) notFound();
+  const board = signedIn ? await listBoardThreads({ project_id: project.id, limit: 10 }) : [];
   const today = labDateOf(new Date().toISOString());
 
   return (
@@ -159,6 +161,15 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
           <EmptyBlock>{t.projectsPage.noMeetings}</EmptyBlock>
         )}
       </section>
+      {signedIn ? (
+        <section className="mt-10" aria-labelledby="project-board">
+          <h2 id="project-board" className="text-base font-semibold">
+            {t.board.title}
+          </h2>
+          <p className="mb-3 text-xs text-muted-foreground">{t.board.projectSubtitle}</p>
+          <MessageBoard initial={board} options={boardOptions(options)} project={{ id: project.id, title: project.title }} />
+        </section>
+      ) : null}
       <RecentActivity type="project" id={project.id} t={t} locale={locale} />
     </TaskProvider>
   );

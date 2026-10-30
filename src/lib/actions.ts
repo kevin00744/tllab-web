@@ -12,6 +12,7 @@ const VALIDATION: ActionError[] = [
   "dateOrder",
   "progressRange",
   "contentTooLong",
+  "contentRequired",
   "nameRequired",
   "emailInvalid",
   "emailTaken",

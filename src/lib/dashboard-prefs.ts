@@ -1,5 +1,5 @@
 // Dashboard 個人設定（存在 member_preferences.dashboard，見 migration 17）
-export const SECTION_KEYS = ["kpis", "my_tasks", "deadlines", "projects", "calendar", "publications", "meetings", "quick_links"] as const;
+export const SECTION_KEYS = ["kpis", "board", "my_tasks", "deadlines", "projects", "calendar", "publications", "meetings", "quick_links"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 export type Scope = "auto" | "mine" | "all";
 

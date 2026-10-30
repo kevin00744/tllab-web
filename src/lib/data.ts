@@ -4,6 +4,7 @@ import { cache } from "react";
 import type { SearchHit } from "@/lib/search";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  BoardThread,
   ActivityEntry,
   CalendarItem,
   FormOptions,
@@ -36,7 +37,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
   return data as T;
 }
 
-type Filter = Record<string, string | boolean | undefined>;
+type Filter = Record<string, string | number | boolean | undefined>;
 const clean = (f: Filter) => Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined && v !== ""));
 
 export const getFormOptions = cache(() => rpc<FormOptions>("form_options"));
@@ -63,6 +64,12 @@ export const listSoftware = (filter: Filter = {}) => rpc<SoftwareTool[]>("list_s
 export const getSoftware = (id: string) => rpc<SoftwareTool | null>("get_software", { p_id: id });
 export const listPipelines = (filter: Filter = {}) => rpc<Pipeline[]>("list_pipelines", { p_filter: clean(filter) });
 export const getPipeline = (id: string) => rpc<PipelineDetail | null>("get_pipeline", { p_id: id });
+export const listBoardThreads = (filter: Filter = {}) => rpc<BoardThread[]>("list_board", { p_filter: clean(filter) });
+/** 留言板的 @ 成員與 # 專案選項 */
+export const boardOptions = (options: FormOptions) => ({
+  members: options.members.map(({ id, name, avatar_url }) => ({ id, name, avatar_url })),
+  projects: options.projects.map((p) => ({ id: p.id, title: p.title, emoji: p.emoji ?? "📁" })),
+});
 export const listMeetings = (filter: Filter = {}) => rpc<Meeting[]>("list_meetings", { p_filter: clean(filter) });
 export const getMeeting = (id: string) => rpc<MeetingDetail | null>("get_meeting", { p_id: id });
 

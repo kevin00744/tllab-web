@@ -295,3 +295,19 @@ export type CalendarItem = {
   deletable: boolean;
   created_by: MemberBrief | null;
 };
+
+// 留言板（migration 21）
+export type BoardPost = {
+  id: string;
+  parent_id: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  edited: boolean;
+  author: MemberBrief | null;
+  mentions_me: boolean;
+  projects: (Ref & { emoji: string })[];
+  editable: boolean;
+  deletable: boolean;
+};
+export type BoardThread = BoardPost & { replies: BoardPost[] };
