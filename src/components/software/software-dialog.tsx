@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useI18n } from "@/lib/i18n/client";
 import type { FormOptions, SoftwareTool } from "@/types/entities";
+import { IconPicker } from "@/components/common/icon-picker";
 
 export function SoftwareDialog({
   tool,
@@ -112,7 +113,7 @@ function SoftwareForm({
     >
       <div className="grid grid-cols-[4.5rem_1fr] gap-3">
         <Field label={t.fields.emoji} htmlFor="sw-emoji">
-          <Input id="sw-emoji" value={form.emoji} maxLength={8} onChange={(e) => set("emoji", e.target.value)} className="text-center text-lg" />
+          <IconPicker id="sw-emoji" value={form.emoji} fallback="🧰" onChange={(v) => set("emoji", v)} />
         </Field>
         <Field label={t.fields.name} htmlFor="sw-name">
           <Input id="sw-name" value={form.name} onChange={(e) => set("name", e.target.value)} autoFocus={!tool} />

@@ -9,6 +9,7 @@ import { priorityTone, statusLabel, taskStatusTone } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/entities";
 import { useTasks } from "./task-provider";
+import { iconText } from "@/lib/icon";
 
 /** 清單檢視：表格，手機版收合為卡片列 */
 export function TasksList({ tasks, today, showProject = true }: { tasks: Task[]; today: string; showProject?: boolean }) {
@@ -52,7 +53,7 @@ export function TasksList({ tasks, today, showProject = true }: { tasks: Task[];
                 </td>
                 {showProject ? (
                   <td className="hidden max-w-48 truncate text-muted-foreground md:table-cell md:px-3 md:py-2.5">
-                    {task.project ? `${task.project.emoji} ${task.project.title}` : "—"}
+                    {task.project ? `${iconText(task.project.emoji)} ${task.project.title}` : "—"}
                   </td>
                 ) : null}
                 <td className="md:px-3 md:py-2.5">

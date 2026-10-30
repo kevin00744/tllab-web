@@ -12,6 +12,7 @@ import { getFormOptions, getSoftware, isUuid, listSoftware } from "@/lib/data";
 import { formatDateTime } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata({ params }: PageProps<"/software/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -34,7 +35,7 @@ export default async function SoftwareDetailPage({ params }: PageProps<"/softwar
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="mb-2 text-4xl leading-none" aria-hidden>
-            {tool.emoji}
+            <EntityIcon value={tool.emoji} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{tool.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">

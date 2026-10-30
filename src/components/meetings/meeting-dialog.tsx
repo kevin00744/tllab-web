@@ -20,6 +20,8 @@ import { labDateOf, labIso, labTimeOf } from "@/lib/date";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import type { FormOptions, MeetingDetail } from "@/types/entities";
+import { EntityIcon } from "@/components/common/entity-icon";
+import { IconPicker } from "@/components/common/icon-picker";
 
 const TYPES = ["lab_meeting", "one_on_one", "journal_club"] as const;
 const EMOJI = { lab_meeting: "🗓️", one_on_one: "💬", journal_club: "📖" } as const;
@@ -125,7 +127,7 @@ function MeetingForm({ meeting, options, today, onDone }: { meeting: MeetingDeta
     >
       <div className="grid grid-cols-[4.5rem_1fr] gap-3">
         <Field label={t.fields.emoji} htmlFor="mt-emoji">
-          <Input id="mt-emoji" value={form.emoji} maxLength={8} onChange={(e) => set("emoji", e.target.value)} className="text-center text-lg" />
+          <IconPicker id="mt-emoji" value={form.emoji} fallback="🗓️" onChange={(v) => set("emoji", v)} />
         </Field>
         <Field label={t.fields.title} htmlFor="mt-title">
           <Input id="mt-title" value={form.title} onChange={(e) => set("title", e.target.value)} autoFocus={!meeting} />
@@ -207,7 +209,7 @@ function MeetingForm({ meeting, options, today, onDone }: { meeting: MeetingDeta
                 }
               />
               <span className="truncate">
-                {p.emoji} {p.title}
+                <EntityIcon value={p.emoji} /> {p.title}
               </span>
             </label>
           ))}

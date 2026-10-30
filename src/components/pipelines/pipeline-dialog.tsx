@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n/client";
 import type { FormOptions, PipelineDetail, PipelineStep } from "@/types/entities";
+import { iconText } from "@/lib/icon";
+import { IconPicker } from "@/components/common/icon-picker";
 
 const LANGUAGES = ["bash", "python", "r", "matlab", "julia", "sql", "yaml", "json"];
 
@@ -109,7 +111,7 @@ function PipelineForm({ pipeline, options, onDone }: { pipeline: PipelineDetail 
     >
       <div className="grid grid-cols-[4.5rem_1fr_7rem] gap-3">
         <Field label={t.fields.emoji} htmlFor="pl-emoji">
-          <Input id="pl-emoji" value={form.emoji} maxLength={8} onChange={(e) => set("emoji", e.target.value)} className="text-center text-lg" />
+          <IconPicker id="pl-emoji" value={form.emoji} fallback="🔬" onChange={(v) => set("emoji", v)} />
         </Field>
         <Field label={t.fields.name} htmlFor="pl-name">
           <Input id="pl-name" value={form.name} onChange={(e) => set("name", e.target.value)} autoFocus={!pipeline} />
@@ -136,7 +138,7 @@ function PipelineForm({ pipeline, options, onDone }: { pipeline: PipelineDetail 
             <option value="">{t.common.none}</option>
             {options.projects.map((pr) => (
               <option key={pr.id} value={pr.id}>
-                {pr.emoji} {pr.title}
+                {iconText(pr.emoji)} {pr.title}
               </option>
             ))}
           </NativeSelect>

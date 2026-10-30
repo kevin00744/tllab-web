@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n";
 import type { PageMeta } from "@/lib/pages";
 import { Section } from "./section";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 const KEYS = ["orientation", "faq", "software", "pipelines"] as const;
 
@@ -27,7 +28,7 @@ export function QuickLinks({
               className="flex flex-col gap-1 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <span className="text-xl leading-none" aria-hidden>
-                {meta.emoji}
+                <EntityIcon value={meta.emoji} />
               </span>
               <span className="text-sm font-medium">{meta.title}</span>
               <span className="text-xs text-muted-foreground">{t.dashboard.quickLinksHint[key]}</span>

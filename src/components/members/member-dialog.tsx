@@ -17,6 +17,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
 import { createClient } from "@/lib/supabase/client";
+import { squareWebp } from "@/lib/image";
 import type { MemberProfile } from "@/types/entities";
 
 const POSITIONS = ["pi", "postdoc", "phd", "master", "undergrad", "staff"] as const;
@@ -42,21 +43,6 @@ function initial(m: MemberProfile | null): MemberInput {
     links: m?.links ?? [],
     sort_order: String(m?.sort_order ?? 0),
   };
-}
-
-/** 照片裁成正方形、縮成 512px WebP，再上傳到公開的 avatars bucket */
-async function squareWebp(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const size = Math.min(512, side);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
-  bitmap.close();
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/webp", 0.88),
-  );
 }
 
 export function MemberDialog({
@@ -117,7 +103,7 @@ function MemberForm({
     if (file.size > MAX_PHOTO) return toast.error(t.membersPage.photoTooLarge);
     setUploading(true);
     try {
-      const blob = await squareWebp(file);
+      const blob = await squareWebp(file, 512);
       const supabase = createClient();
       const path = `${member.id}/${crypto.randomUUID()}.webp`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(path, await blob.arrayBuffer(), { contentType: "image/webp" });

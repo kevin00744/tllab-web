@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
 import { statusLabel } from "@/lib/status";
 import type { FormOptions, Project } from "@/types/entities";
+import { IconPicker } from "@/components/common/icon-picker";
 
 const STATUSES = ["planning", "active", "paused", "completed"] as const;
 
@@ -126,13 +127,7 @@ function ProjectForm({
             ) : null}
             <div className="grid grid-cols-[4.5rem_1fr] gap-3">
               <Field label={t.fields.emoji} htmlFor="project-emoji">
-                <Input
-                  id="project-emoji"
-                  value={form.emoji}
-                  maxLength={8}
-                  onChange={(e) => set("emoji", e.target.value)}
-                  className="text-center text-lg"
-                />
+                <IconPicker id="project-emoji" value={form.emoji} fallback="📁" onChange={(v) => set("emoji", v)} />
               </Field>
               <Field label={t.fields.name} htmlFor="project-title">
                 <Input id="project-title" value={form.title} onChange={(e) => set("title", e.target.value)} autoFocus={!project} />

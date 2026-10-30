@@ -5,6 +5,7 @@ import { FilterBar, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
 import { FaqDialog } from "@/components/faq/faq-dialog";
 import { Markdown } from "@/components/markdown";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { canEdit, getCurrentMember } from "@/lib/auth";
@@ -39,7 +40,12 @@ export default async function FaqPage({ searchParams }: PageProps<"/faq">) {
         emoji={meta.emoji}
         title={meta.title}
         description={t.faqPage.description}
-        actions={canEdit(me) ? <FaqDialog faq={null} categories={names} defaultCategory={category} /> : null}
+        actions={
+          <>
+            <ManageButton entity="faq" />
+            {canEdit(me) ? <FaqDialog faq={null} categories={names} defaultCategory={category} /> : null}
+          </>
+        }
       />
       <FilterBar>
         <div className="max-w-full overflow-x-auto">

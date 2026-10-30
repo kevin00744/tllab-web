@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { PublicationStage } from "@/types/db";
 import type { Publication } from "@/types/entities";
 import { usePublications } from "./publication-provider";
+import { iconText } from "@/lib/icon";
 
 const STAGES: PublicationStage[] = ["idea", "drafting", "submitted", "revision", "accepted", "published"];
 
@@ -98,7 +99,7 @@ export function PublicationsTable({
                 <td className="px-3 py-2.5 text-xs text-muted-foreground">{p.venue ?? "—"}</td>
                 {showProject ? (
                   <td className="max-w-40 truncate px-3 py-2.5 text-xs text-muted-foreground">
-                    {p.project ? `${p.project.emoji} ${p.project.title}` : "—"}
+                    {p.project ? `${iconText(p.project.emoji)} ${p.project.title}` : "—"}
                   </td>
                 ) : null}
                 <td className="px-4 py-2.5 text-xs text-muted-foreground">

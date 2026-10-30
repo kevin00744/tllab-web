@@ -19,6 +19,7 @@ import { labDateOf } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { isSystemAdmin, projectStatusTone, roleLabel, roleTone, statusLabel } from "@/lib/status";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata({ params }: PageProps<"/members/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -115,7 +116,7 @@ export default async function MemberDetailPage({ params }: PageProps<"/members/[
                 {member.projects.map((p) => (
                   <li key={p.id} className="flex items-center gap-2">
                     <Link href={`/projects/${p.id}`} className="min-w-0 flex-1 truncate hover:underline">
-                      {p.emoji} {p.title}
+                      <EntityIcon value={p.emoji} /> {p.title}
                     </Link>
                     {p.is_owner ? <span className="text-[11px] text-muted-foreground">{t.membersPage.owner}</span> : null}
                     <Badge tone={projectStatusTone[p.status]}>{statusLabel(t, "project", p.status)}</Badge>

@@ -3,6 +3,7 @@ import { CalendarDaysIcon, KanbanSquareIcon, ListIcon } from "lucide-react";
 
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { NewTaskButton, OpenTaskOnLoad, TaskProvider } from "@/components/tasks/task-provider";
 import { TasksBoard } from "@/components/tasks/tasks-board";
@@ -12,6 +13,7 @@ import { getFormOptions, isUuid, listTasks } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
+import { iconText } from "@/lib/icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -47,7 +49,12 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   return (
     <TaskProvider options={options} defaults={{ project_id: project }}>
       <OpenTaskOnLoad task={tasks.find((x) => x.id === str("task")) ?? null} />
-      <PageHeader emoji={meta.emoji} title={meta.title} actions={<NewTaskButton />} />
+      <PageHeader emoji={meta.emoji} title={meta.title} actions={
+          <>
+            <ManageButton entity="task" />
+            <NewTaskButton />
+          </>
+        } />
       <FilterBar>
         <ViewTabs
           current={view}
@@ -70,7 +77,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
         <FilterSelect
           param="project"
           label={t.tasksPage.anyProject}
-          options={options.projects.map((p) => ({ value: p.id, label: `${p.emoji} ${p.title}` }))}
+          options={options.projects.map((p) => ({ value: p.id, label: `${iconText(p.emoji)} ${p.title}` }))}
         />
         <FilterSelect
           param="member"

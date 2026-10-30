@@ -13,6 +13,7 @@ import { getFormOptions, getPipeline, isUuid } from "@/lib/data";
 import { formatDateTime } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata({ params }: PageProps<"/pipelines/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -35,7 +36,7 @@ export default async function PipelineDetailPage({ params }: PageProps<"/pipelin
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="mb-2 text-4xl leading-none" aria-hidden>
-            {pipeline.emoji}
+            <EntityIcon value={pipeline.emoji} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
             {pipeline.name} <span className="font-mono text-base font-normal text-muted-foreground">v{pipeline.version}</span>
@@ -49,7 +50,7 @@ export default async function PipelineDetailPage({ params }: PageProps<"/pipelin
             ) : null}
             {pipeline.project ? (
               <Link href={`/projects/${pipeline.project.id}`} className="hover:text-foreground">
-                {pipeline.project.emoji} {pipeline.project.title}
+                <EntityIcon value={pipeline.project.emoji} /> {pipeline.project.title}
               </Link>
             ) : null}
             {pipeline.tags.map((x) => (

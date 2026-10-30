@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { isActive, type PageKey } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export type SidebarGroup = {
   label?: string;
@@ -35,7 +36,7 @@ export function SidebarNav({ groups, onNavigate }: { groups: SidebarGroup[]; onN
                 )}
               >
                 <span className="w-5 text-center text-base leading-none" aria-hidden>
-                  {item.emoji}
+                  <EntityIcon value={item.emoji} />
                 </span>
                 <span className="truncate">{item.title}</span>
               </Link>

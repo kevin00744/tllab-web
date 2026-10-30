@@ -8,6 +8,7 @@ import type { Dictionary } from "@/lib/i18n";
 import { format } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
 import type { Meeting } from "@/types/entities";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 const typeTone = { lab_meeting: "blue", one_on_one: "purple", journal_club: "green" } as const;
 
@@ -25,7 +26,7 @@ export function MeetingList({ meetings, t, locale }: { meetings: Meeting[]; t: D
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="min-w-0 truncate font-medium">
-                  {m.emoji} {m.title}
+                  <EntityIcon value={m.emoji} /> {m.title}
                 </span>
                 <Badge tone={typeTone[m.type]}>{t.meetingType[m.type]}</Badge>
               </div>
@@ -41,7 +42,7 @@ export function MeetingList({ meetings, t, locale }: { meetings: Meeting[]; t: D
                 ) : null}
                 {m.projects.slice(0, 2).map((p) => (
                   <span key={p.id} className="truncate">
-                    {p.emoji} {p.title}
+                    <EntityIcon value={p.emoji} /> {p.title}
                   </span>
                 ))}
               </div>

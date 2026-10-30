@@ -1319,3 +1319,101 @@ reset request.jwt.claim.sub;
 
 drop function public.t_activity();
 drop function public.t_list_activity(jsonb);
+
+-- =============================================================================
+-- 管理員快速管理（admin_manage）與圖示
+-- =============================================================================
+do $$
+begin
+  assert icon_ok('🧪') and icon_ok('🧑‍🔬'), 'emoji';
+  assert icon_ok('https://abc.supabase.co/storage/v1/object/public/icons/10000000-0000-0000-0000-000000000001/x.webp'), '上傳的圖示';
+  assert not icon_ok('https://evil.example/a.png'), '外部網址';
+  assert not icon_ok('<img src=x>') and not icon_ok('') and not icon_ok(repeat('a', 20));
+end $$;
+
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';  -- 一般成員
+do $$
+begin
+  begin perform admin_manage(jsonb_build_object('entity', 'faq', 'action', 'delete', 'ids', jsonb_build_array((select id from faqs limit 1))));
+    raise exception '一般成員不可使用';
+  exception when insufficient_privilege then null; end;
+  -- 一般成員透過原本的 API 也不能存入奇怪的圖示
+  begin perform save_project(jsonb_build_object('id', '20000000-0000-0000-0000-000000000001', 'title', 'x', 'emoji', 'https://evil.example/a.png'));
+    raise exception '不應接受外部圖示網址';
+  exception when check_violation then null; when insufficient_privilege then null; end;
+end $$;
+
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';  -- 陳怡君（admin）
+do $$
+declare
+  f1 uuid; f2 uuid; t1 uuid; root uuid; child uuid; n int;
+begin
+  perform save_faq('{"question":"管理測試一","category":"一般"}');
+  perform save_faq('{"question":"管理測試二","category":"一般"}');
+  f1 := (select id from faqs where question = '管理測試一');
+  f2 := (select id from faqs where question = '管理測試二');
+  -- 重新命名
+  n := admin_manage(jsonb_build_object('entity', 'faq', 'action', 'rename', 'ids', jsonb_build_array(f1), 'value', '  改名後  '));
+  assert n = 1 and (select question from faqs where id = f1) = '改名後';
+  begin perform admin_manage(jsonb_build_object('entity', 'faq', 'action', 'rename', 'ids', jsonb_build_array(f1), 'value', ' '));
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  begin perform admin_manage(jsonb_build_object('entity', 'faq', 'action', 'rename', 'ids', jsonb_build_array(f1, f2), 'value', 'x'));
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  -- 移動（分類）
+  n := admin_manage(jsonb_build_object('entity', 'faq', 'action', 'move', 'ids', jsonb_build_array(f1, f2), 'value', '儀器'));
+  assert n = 2 and (select count(*) from faqs where id in (f1, f2) and category = '儀器') = 2;
+  -- 批量刪除
+  n := admin_manage(jsonb_build_object('entity', 'faq', 'action', 'delete', 'ids', jsonb_build_array(f1, f2)));
+  assert n = 2 and not exists (select 1 from faqs where id in (f1, f2));
+  -- 專案狀態、圖示
+  n := admin_manage('{"entity":"project","action":"move","ids":["20000000-0000-0000-0000-000000000002"],"value":"paused"}');
+  assert (select status from projects where id = '20000000-0000-0000-0000-000000000002') = 'paused';
+  begin perform admin_manage('{"entity":"project","action":"move","ids":["20000000-0000-0000-0000-000000000002"],"value":"nope"}');
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  perform admin_manage('{"entity":"project","action":"icon","ids":["20000000-0000-0000-0000-000000000002"],"value":"🐟"}');
+  assert (select emoji from projects where id = '20000000-0000-0000-0000-000000000002') = '🐟';
+  begin perform admin_manage('{"entity":"project","action":"icon","ids":["20000000-0000-0000-0000-000000000002"],"value":"https://evil.example/x.png"}');
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  begin perform admin_manage('{"entity":"task","action":"icon","ids":["50000000-0000-0000-0000-000000000001"],"value":"🐟"}');
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  -- 任務移到其他專案／不屬於專案
+  t1 := '50000000-0000-0000-0000-000000000001';
+  perform admin_manage(jsonb_build_object('entity', 'task', 'action', 'move', 'ids', jsonb_build_array(t1), 'value', '20000000-0000-0000-0000-000000000003'));
+  assert (select project_id from tasks where id = t1) = '20000000-0000-0000-0000-000000000003';
+  perform admin_manage(jsonb_build_object('entity', 'task', 'action', 'move', 'ids', jsonb_build_array(t1), 'value', ''));
+  assert (select project_id from tasks where id = t1) is null;
+  begin perform admin_manage(jsonb_build_object('entity', 'task', 'action', 'move', 'ids', jsonb_build_array(t1), 'value', gen_random_uuid()));
+    raise exception 'x'; exception when no_data_found then null; end;
+  -- 頁面移動：不能移到自己的子頁面
+  root := (select id from documents where kind = 'orientation' and parent_id is null order by sort_order limit 1);
+  perform save_document(jsonb_build_object('kind', 'orientation', 'parent_id', root, 'title', '管理子頁', 'slug', 'admin-child'));
+  child := (select id from documents where slug = 'admin-child');
+  begin perform admin_manage(jsonb_build_object('entity', 'document', 'action', 'move', 'ids', jsonb_build_array(root), 'value', child));
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  perform admin_manage(jsonb_build_object('entity', 'document', 'action', 'move', 'ids', jsonb_build_array(child), 'value', ''));
+  assert (select parent_id from documents where id = child) is null, '移到最上層';
+  assert (select sort_order from documents where id = child) > (select max(sort_order) from documents where kind = 'orientation' and parent_id is null and id <> child);
+  -- 刪除上層頁面時，已一起刪除的子頁面不重複計算
+  perform admin_manage(jsonb_build_object('entity', 'document', 'action', 'move', 'ids', jsonb_build_array(child), 'value', root));
+  perform save_document(jsonb_build_object('kind', 'orientation', 'parent_id', child, 'title', '孫頁', 'slug', 'admin-grandchild'));
+  n := admin_manage(jsonb_build_object('entity', 'document', 'action', 'delete', 'ids',
+         jsonb_build_array(child, (select id from documents where slug = 'admin-grandchild'))));
+  assert n = 1 and not exists (select 1 from documents where slug in ('admin-child', 'admin-grandchild'));
+  -- 論文、會議、軟體、分析流程
+  perform admin_manage('{"entity":"publication","action":"move","ids":["30000000-0000-0000-0000-000000000003"],"value":"revision"}');
+  assert (select stage from publications where id = '30000000-0000-0000-0000-000000000003') = 'revision';
+  perform admin_manage(jsonb_build_object('entity', 'meeting', 'action', 'move', 'ids', jsonb_build_array((select id from meetings limit 1)), 'value', 'journal_club'));
+  perform admin_manage(jsonb_build_object('entity', 'software', 'action', 'move', 'ids', jsonb_build_array((select id from software_tools limit 1)), 'value', '影像處理'));
+  perform admin_manage(jsonb_build_object('entity', 'pipeline', 'action', 'rename', 'ids', jsonb_build_array((select id from pipelines limit 1)), 'value', '新名稱流程'));
+  assert exists (select 1 from pipelines where name = '新名稱流程');
+  -- 不合法的參數
+  begin perform admin_manage('{"entity":"member","action":"delete","ids":["10000000-0000-0000-0000-000000000005"]}');
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  begin perform admin_manage('{"entity":"faq","action":"delete","ids":[]}');
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+  begin perform admin_manage('{"entity":"faq","action":"delete","ids":["not-a-uuid"]}');
+    raise exception 'x'; exception when invalid_parameter_value then null; end;
+end $$;
+reset role;
+reset request.jwt.claim.sub;

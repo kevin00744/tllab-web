@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { projectStatusTone, statusLabel } from "@/lib/status";
 import type { DashboardData } from "@/types/dashboard";
 import { EmptyState, Section } from "./section";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export function ProjectProgress({
   data,
@@ -29,7 +30,7 @@ export function ProjectProgress({
           {data.projects.map((p) => (
             <li key={p.id}>
               <div className="flex items-center gap-2">
-                <span aria-hidden>{p.emoji}</span>
+                <span aria-hidden><EntityIcon value={p.emoji} /></span>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.title}</span>
                 <Badge tone={projectStatusTone[p.status]}>{statusLabel(t, "project", p.status)}</Badge>
               </div>

@@ -5,6 +5,7 @@ import { EmptyBlock } from "@/components/common/field";
 import { FilterBar, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
 import { MemberAvatar } from "@/components/layout/user-menu";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { SoftwareDialog } from "@/components/software/software-dialog";
 import { canEdit, getCurrentMember } from "@/lib/auth";
@@ -12,6 +13,7 @@ import { getFormOptions, listSoftware } from "@/lib/data";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
 import type { SoftwareTool } from "@/types/entities";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -37,7 +39,12 @@ export default async function SoftwarePage({ searchParams }: PageProps<"/softwar
         emoji={meta.emoji}
         title={meta.title}
         description={t.softwarePage.description}
-        actions={canEdit(me) ? <SoftwareDialog tool={null} categories={categories} members={options.members} /> : null}
+        actions={
+          <>
+            <ManageButton entity="software" />
+            {canEdit(me) ? <SoftwareDialog tool={null} categories={categories} members={options.members} /> : null}
+          </>
+        }
       />
       <FilterBar>
         <div className="max-w-full overflow-x-auto">
@@ -69,7 +76,7 @@ export default async function SoftwarePage({ searchParams }: PageProps<"/softwar
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-2xl leading-none" aria-hidden>
-                          {s.emoji}
+                          <EntityIcon value={s.emoji} />
                         </span>
                         <span className="font-semibold">{s.name}</span>
                       </div>

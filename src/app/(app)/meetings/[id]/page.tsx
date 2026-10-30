@@ -15,6 +15,7 @@ import { getFormOptions, getMeeting, isUuid } from "@/lib/data";
 import { formatDateTime, labDateOf, labTimeOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { linkText } from "@/lib/links";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata({ params }: PageProps<"/meetings/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -38,7 +39,7 @@ export default async function MeetingDetailPage({ params }: PageProps<"/meetings
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="mb-2 text-4xl leading-none" aria-hidden>
-            {meeting.emoji}
+            <EntityIcon value={meeting.emoji} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{meeting.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
@@ -127,7 +128,7 @@ export default async function MeetingDetailPage({ params }: PageProps<"/meetings
                 {meeting.projects.map((p) => (
                   <li key={p.id}>
                     <Link href={`/projects/${p.id}`} className="hover:underline">
-                      {p.emoji} {p.title}
+                      <EntityIcon value={p.emoji} /> {p.title}
                     </Link>
                   </li>
                 ))}

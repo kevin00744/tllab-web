@@ -4,11 +4,13 @@ import { EmptyBlock } from "@/components/common/field";
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { MeetingDialog } from "@/components/meetings/meeting-dialog";
 import { MeetingList } from "@/components/meetings/meeting-list";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { getFormOptions, isUuid, listMeetings } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
+import { iconText } from "@/lib/icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -42,7 +44,12 @@ export default async function MeetingsPage({ searchParams }: PageProps<"/meeting
       <PageHeader
         emoji={meta.emoji}
         title={meta.title}
-        actions={options.can_create ? <MeetingDialog meeting={null} options={options} today={today} /> : null}
+        actions={
+          <>
+            <ManageButton entity="meeting" />
+            {options.can_create ? <MeetingDialog meeting={null} options={options} today={today} /> : null}
+          </>
+        }
       />
       <FilterBar>
         <FilterSelect param="type" label={`${t.meetingsPage.type}：${t.common.all}`} options={TYPES.map((x) => ({ value: x, label: t.meetingType[x] }))} />
@@ -54,7 +61,7 @@ export default async function MeetingsPage({ searchParams }: PageProps<"/meeting
         <FilterSelect
           param="project"
           label={`${t.fields.project}：${t.common.all}`}
-          options={options.projects.map((p) => ({ value: p.id, label: `${p.emoji ?? ""} ${p.title}`.trim() }))}
+          options={options.projects.map((p) => ({ value: p.id, label: `${iconText(p.emoji)} ${p.title}`.trim() }))}
         />
         <SearchBox placeholder={t.meetingsPage.search} className="w-full sm:ml-auto sm:w-56" />
       </FilterBar>

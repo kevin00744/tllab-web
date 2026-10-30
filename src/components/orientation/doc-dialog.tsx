@@ -14,6 +14,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { useI18n } from "@/lib/i18n/client";
 import { descendantIds } from "@/lib/tree";
 import type { DocumentItem } from "@/types/entities";
+import { iconText } from "@/lib/icon";
+import { IconPicker } from "@/components/common/icon-picker";
 
 type Mode = { kind: "new"; parentId?: string } | { kind: "edit"; doc: DocumentItem };
 
@@ -95,7 +97,7 @@ function DocForm({ mode, documents, onDone }: { mode: Mode; documents: DocumentI
     >
       <div className="grid grid-cols-[4.5rem_1fr] gap-3">
         <Field label={t.fields.emoji} htmlFor="doc-emoji">
-          <Input id="doc-emoji" value={form.emoji} maxLength={8} onChange={(e) => set("emoji", e.target.value)} className="text-center text-lg" />
+          <IconPicker id="doc-emoji" value={form.emoji} fallback="📘" onChange={(v) => set("emoji", v)} />
         </Field>
         <Field label={t.fields.title} htmlFor="doc-title">
           <Input id="doc-title" value={form.title} onChange={(e) => set("title", e.target.value)} autoFocus />
@@ -108,7 +110,7 @@ function DocForm({ mode, documents, onDone }: { mode: Mode; documents: DocumentI
             .filter((d) => !excluded.has(d.id))
             .map((d) => (
               <option key={d.id} value={d.id}>
-                {d.emoji} {d.title}
+                {iconText(d.emoji)} {d.title}
               </option>
             ))}
         </NativeSelect>

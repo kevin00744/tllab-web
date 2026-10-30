@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { priorityTone, statusLabel } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/entities";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export function TaskCardBody({ task, today }: { task: Task; today: string }) {
   const { t } = useI18n();
@@ -21,7 +22,7 @@ export function TaskCardBody({ task, today }: { task: Task; today: string }) {
       </div>
       {task.project ? (
         <div className="mt-1 truncate text-xs text-muted-foreground">
-          {task.project.emoji} {task.project.title}
+          <EntityIcon value={task.project.emoji} /> {task.project.title}
         </div>
       ) : null}
       <div className="mt-2 flex items-center gap-1.5">

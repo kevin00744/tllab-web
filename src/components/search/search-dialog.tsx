@@ -12,14 +12,18 @@ import { groupHits, hrefFor, type SearchHit } from "@/lib/search";
 import { plainExcerpt } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { Highlight } from "./highlight";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 /** 全站搜尋：頁首按鈕或 Ctrl／⌘＋K、「/」開啟；方向鍵選擇、Enter 前往 */
+const EMPTY: SearchHit[] = [];
+
 export function SearchDialog() {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [hits, setHits] = useState<SearchHit[]>([]);
+  // 結果與其查詢字詞一起保存：字詞改變後不顯示上一個查詢的結果
+  const [result, setResult] = useState<{ term: string; hits: SearchHit[] }>({ term: "", hits: [] });
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState(0);
   const request = useRef(0);
@@ -48,14 +52,14 @@ export function SearchDialog() {
     const timer = setTimeout(
       async () => {
         if (!term) {
-          setHits([]);
+          setResult({ term: "", hits: [] });
           setLoading(false);
           return;
         }
         setLoading(true);
-        const result = await searchAction(term);
+        const found = await searchAction(term);
         if (id !== request.current) return;
-        setHits(result);
+        setResult({ term, hits: found });
         setActive(0);
         setLoading(false);
       },
@@ -64,12 +68,14 @@ export function SearchDialog() {
     return () => clearTimeout(timer);
   }, [q]);
 
+  const term = q.trim();
+  const hits = result.term === term ? result.hits : EMPTY;
   const groups = useMemo(() => groupHits(hits), [hits]);
   const flat = useMemo(() => groups.flatMap((g) => g.hits).filter((h) => hrefFor(h)), [groups]);
-  const term = q.trim();
 
   function go(href: string) {
     setOpen(false);
+    setQ("");
     router.push(href);
   }
 
@@ -131,7 +137,7 @@ export function SearchDialog() {
           <div ref={listRef} id="search-results" role="listbox" className="max-h-[60vh] overflow-y-auto p-2">
             {!term ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">{t.search.hint}</p>
-            ) : !loading && hits.length === 0 ? (
+            ) : !loading && result.term === term && hits.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">{format(t.search.noResults, { q: term })}</p>
             ) : (
               groups.map((g) => (
@@ -157,7 +163,7 @@ export function SearchDialog() {
                         )}
                       >
                         <span className="w-5 shrink-0 text-center" aria-hidden>
-                          {h.emoji}
+                          <EntityIcon value={h.emoji} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">

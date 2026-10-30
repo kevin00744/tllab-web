@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
 import { statusLabel } from "@/lib/status";
 import type { FormOptions, Publication } from "@/types/entities";
+import { iconText } from "@/lib/icon";
 
 const TYPES = ["journal", "conference", "preprint", "thesis"] as const;
 const STAGES = ["idea", "drafting", "submitted", "revision", "accepted", "published"] as const;
@@ -163,7 +164,7 @@ function PublicationForm({
                   <option value="">{t.common.none}</option>
                   {options.projects.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.emoji} {p.title}
+                      {iconText(p.emoji)} {p.title}
                     </option>
                   ))}
                 </NativeSelect>

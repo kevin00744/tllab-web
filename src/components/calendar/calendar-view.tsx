@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import type { CalendarItem, CalendarKind, FormOptions } from "@/types/entities";
 import { chipClass, itemHref } from "./calendar-style";
 import { EventDialog } from "./event-dialog";
+import { iconText } from "@/lib/icon";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 const KINDS: CalendarKind[] = ["event", "meeting", "task", "publication"];
 const MAX_CHIPS = 3;
@@ -62,7 +64,7 @@ export function CalendarView({
     const href = itemHref(item);
     const label = (
       <>
-        {item.kind !== "event" ? <span aria-hidden>{item.emoji} </span> : null}
+        {item.kind !== "event" ? <span aria-hidden><EntityIcon value={item.emoji} /> </span> : null}
         {!item.all_day && item.starts_at && item.start_date === day ? <span className="tabular-nums opacity-80">{labTimeOf(item.starts_at)} </span> : null}
         {item.title}
       </>
@@ -232,7 +234,7 @@ export function CalendarView({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">
-                      {item.kind !== "event" ? `${item.emoji} ` : ""}
+                      {item.kind !== "event" ? `${iconText(item.emoji)} ` : ""}
                       {item.title}
                     </span>
                     <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
@@ -249,7 +251,7 @@ export function CalendarView({
                       ) : null}
                       {item.project ? (
                         <span>
-                          {item.project.emoji} {item.project.title}
+                          <EntityIcon value={item.project.emoji} /> {item.project.title}
                         </span>
                       ) : null}
                     </span>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EmptyBlock } from "@/components/common/field";
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { MemberAvatar } from "@/components/layout/user-menu";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { PipelineDialog } from "@/components/pipelines/pipeline-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
 import { plainExcerpt } from "@/lib/text";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -35,7 +37,12 @@ export default async function PipelinesPage({ searchParams }: PageProps<"/pipeli
         emoji={meta.emoji}
         title={meta.title}
         description={p.description}
-        actions={options.can_create ? <PipelineDialog pipeline={null} options={options} /> : null}
+        actions={
+          <>
+            <ManageButton entity="pipeline" />
+            {options.can_create ? <PipelineDialog pipeline={null} options={options} /> : null}
+          </>
+        }
       />
       <FilterBar>
         {tagList.length ? (
@@ -56,7 +63,7 @@ export default async function PipelinesPage({ searchParams }: PageProps<"/pipeli
               >
                 <div className="flex items-start gap-2">
                   <span className="text-2xl leading-none" aria-hidden>
-                    {pl.emoji}
+                    <EntityIcon value={pl.emoji} />
                   </span>
                   <span className="min-w-0 flex-1 font-semibold">{pl.name}</span>
                   <Badge tone="gray" className="font-mono">

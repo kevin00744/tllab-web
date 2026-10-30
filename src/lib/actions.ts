@@ -21,6 +21,7 @@ const VALIDATION: ActionError[] = [
   "invalidParent",
   "dateRequired",
   "invalidFilter",
+  "iconInvalid",
 ];
 
 /** 資料庫函式的錯誤碼 → 介面訊息 key（見 migration 08 開頭說明） */
@@ -29,6 +30,8 @@ export function toActionError(error: PostgrestError): ActionError {
   // members_protect_admin trigger（migration 11）
   if (error.message.includes("至少需要保留一位系統管理員")) return "lastSystemAdmin";
   if (error.code === "42501") return "noPermission";
+  // *_icon_ok check constraint（migration 20）
+  if (error.code === "23514" && error.message.includes("icon_ok")) return "iconInvalid";
   if (error.code === "P0002") return "notFound";
   if (error.code === "40001") return "conflict";
   // members_keep_one_admin trigger（migration 02）

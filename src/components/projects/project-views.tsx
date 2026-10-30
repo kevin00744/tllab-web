@@ -10,6 +10,7 @@ import { projectStatusTone, statusLabel } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus } from "@/types/db";
 import type { Project } from "@/types/entities";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 type Props = { projects: Project[]; t: Dictionary; locale: Locale };
 
@@ -59,7 +60,7 @@ export function ProjectsTable({ projects, t, locale }: Props) {
             <tr key={p.id} className="hover:bg-accent/40">
               <td className="px-4 py-2.5">
                 <Link href={`/projects/${p.id}`} className="font-medium hover:underline">
-                  {p.emoji} {p.title}
+                  <EntityIcon value={p.emoji} /> {p.title}
                 </Link>
                 {p.tags.length ? (
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -117,7 +118,7 @@ export function ProjectsBoard({ projects, t, locale }: Props) {
                     className="block rounded-lg border bg-card p-3 shadow-xs transition-shadow hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <div className="text-sm font-medium">
-                      {p.emoji} {p.title}
+                      <EntityIcon value={p.emoji} /> {p.title}
                     </div>
                     <div className="mt-2">
                       <ProgressMeter value={p.progress} label={p.title} />
@@ -196,7 +197,7 @@ export function ProjectsTimeline({ projects, t, locale, today }: Props & { today
             return (
               <li key={p.id} className="grid items-center" style={{ gridTemplateColumns: "14rem 1fr" }}>
                 <Link href={`/projects/${p.id}`} className="truncate px-3 py-2.5 text-sm hover:underline">
-                  {p.emoji} {p.title}
+                  <EntityIcon value={p.emoji} /> {p.title}
                 </Link>
                 <div className="relative h-10">
                   {months.map((m, i) =>

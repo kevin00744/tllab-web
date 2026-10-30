@@ -9,6 +9,7 @@ import type { Member } from "@/types/db";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { SearchDialog } from "@/components/search/search-dialog";
+import { CurrentMemberProvider } from "./current-member";
 import { LanguageToggle } from "./language-toggle";
 import { SidebarNav, type SidebarGroup } from "./sidebar-nav";
 import { ThemeToggle } from "./theme-toggle";
@@ -56,41 +57,43 @@ export function AppShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh">
-      {/* 桌面：固定側邊欄 */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:block">
-        <SidebarBody groups={groups} member={member} />
-      </aside>
+    <CurrentMemberProvider id={member?.id ?? null}>
+      <div className="flex min-h-dvh">
+        {/* 桌面：固定側邊欄 */}
+        <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:block">
+          <SidebarBody groups={groups} member={member} />
+        </aside>
 
-      {/* 手機：抽屜式側邊欄 */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="bg-sidebar p-0" closeLabel={t.nav.closeMenu}>
-          <SheetTitle className="sr-only">{t.app.name}</SheetTitle>
-          <SheetDescription className="sr-only">{t.app.tagline}</SheetDescription>
-          <SidebarBody groups={groups} member={member} onNavigate={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
+        {/* 手機：抽屜式側邊欄 */}
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent side="left" className="bg-sidebar p-0" closeLabel={t.nav.closeMenu}>
+            <SheetTitle className="sr-only">{t.app.name}</SheetTitle>
+            <SheetDescription className="sr-only">{t.app.tagline}</SheetDescription>
+            <SidebarBody groups={groups} member={member} onNavigate={() => setOpen(false)} />
+          </SheetContent>
+        </Sheet>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur md:px-6">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="md:hidden"
-            aria-label={t.nav.openMenu}
-            onClick={() => setOpen(true)}
-          >
-            <MenuIcon />
-          </Button>
-          <SearchDialog />
-          <div className="ml-auto flex items-center gap-1">
-            <LanguageToggle />
-            <ThemeToggle />
-            {member ? null : <GuestSignIn compact />}
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur md:px-6">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="md:hidden"
+              aria-label={t.nav.openMenu}
+              onClick={() => setOpen(true)}
+            >
+              <MenuIcon />
+            </Button>
+            <SearchDialog />
+            <div className="ml-auto flex items-center gap-1">
+              <LanguageToggle />
+              <ThemeToggle />
+              {member ? null : <GuestSignIn compact />}
+            </div>
+          </header>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </CurrentMemberProvider>
   );
 }

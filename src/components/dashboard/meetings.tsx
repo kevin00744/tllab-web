@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { plainExcerpt } from "@/lib/text";
 import type { DashboardData } from "@/types/dashboard";
 import { EmptyState, Section } from "./section";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export function Meetings({
   data,
@@ -33,7 +34,7 @@ export function Meetings({
           <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div className="min-w-0">
               <Link href={`/meetings/${next.id}`} className="block truncate text-sm font-medium hover:underline">
-                {next.emoji} {next.title}
+                <EntityIcon value={next.emoji} /> {next.title}
               </Link>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
                 <span>

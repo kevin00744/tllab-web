@@ -7,6 +7,7 @@ import { priorityTone, statusLabel, taskStatusTone } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { DashboardData } from "@/types/dashboard";
 import { EmptyState, Section } from "./section";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export function MyTasks({
   data,
@@ -43,7 +44,7 @@ export function MyTasks({
                   <div className="line-clamp-2 text-sm sm:line-clamp-1">{task.title}</div>
                   {task.project ? (
                     <div className="truncate text-xs text-muted-foreground">
-                      {task.project.emoji} {task.project.title}
+                      <EntityIcon value={task.project.emoji} /> {task.project.title}
                     </div>
                   ) : null}
                 </div>

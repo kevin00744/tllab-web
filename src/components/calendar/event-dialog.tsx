@@ -16,6 +16,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { labDateOf, labIso, labTimeOf } from "@/lib/date";
 import { useI18n } from "@/lib/i18n/client";
 import type { CalendarItem, EventCategory, FormOptions } from "@/types/entities";
+import { iconText } from "@/lib/icon";
 
 export const CATEGORIES: EventCategory[] = ["event", "deadline", "leave", "booking", "holiday", "other"];
 
@@ -172,7 +173,7 @@ function EventForm({ item, date, options, onDone }: { item: CalendarItem | null;
             <option value="">{t.common.none}</option>
             {options.projects.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.emoji} {p.title}
+                {iconText(p.emoji)} {p.title}
               </option>
             ))}
           </NativeSelect>

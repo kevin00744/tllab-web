@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 import type { DashboardData } from "@/types/dashboard";
 import { EmptyState, Section } from "./section";
+import { iconText } from "@/lib/icon";
 
 /** 未來 7 天的行事曆活動與會議；自己相關的排前面並標示 */
 export function UpcomingCalendar({ data, t, locale, className }: { data: DashboardData; t: Dictionary; locale: Locale; className?: string }) {
@@ -40,7 +41,7 @@ export function UpcomingCalendar({ data, t, locale, className }: { data: Dashboa
                           {item.all_day || !item.starts_at ? t.calendarPage.allDay : labTimeOf(item.starts_at)}
                         </span>
                         <span className="min-w-0 flex-1 truncate">
-                          {item.kind === "meeting" ? `${item.emoji} ` : ""}
+                          {item.kind === "meeting" ? `${iconText(item.emoji)} ` : ""}
                           {item.title}
                         </span>
                         {item.mine ? <span className="shrink-0 text-[11px] text-primary">{t.dashboard.mine}</span> : null}

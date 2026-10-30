@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { DocNode } from "@/lib/tree";
 import { cn } from "@/lib/utils";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 /** Orientation Guide 左側目錄（樹狀） */
 export function DocTree({ nodes, current, depth = 0 }: { nodes: DocNode[]; current: string; depth?: number }) {
@@ -18,7 +19,7 @@ export function DocTree({ nodes, current, depth = 0 }: { nodes: DocNode[]; curre
             )}
           >
             <span aria-hidden className="shrink-0">
-              {n.emoji}
+              <EntityIcon value={n.emoji} />
             </span>
             <span className="min-w-0 truncate" title={n.title}>
               {n.title}

@@ -21,6 +21,7 @@ import { formatDate, formatDateTime, labDateOf } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { projectStatusTone, statusLabel } from "@/lib/status";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata({ params }: PageProps<"/projects/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -52,7 +53,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="mb-2 text-4xl leading-none" aria-hidden>
-            {project.emoji}
+            <EntityIcon value={project.emoji} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{project.title}</h1>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -148,7 +149,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
                   {formatDateTime(locale, m.starts_at, { dateStyle: "medium" })}
                 </span>
                 <Link href={`/meetings/${m.id}`} className="min-w-0 flex-1 truncate hover:underline">
-                  {m.emoji} {m.title}
+                  <EntityIcon value={m.emoji} /> {m.title}
                 </Link>
                 <Badge tone="gray">{t.meetingType[m.type]}</Badge>
               </li>

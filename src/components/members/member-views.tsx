@@ -8,6 +8,7 @@ import type { Dictionary } from "@/lib/i18n";
 import { format } from "@/lib/i18n";
 import { roleLabel, roleTone } from "@/lib/status";
 import type { MemberProfile } from "@/types/entities";
+import { iconText } from "@/lib/icon";
 
 type Props = { members: MemberProfile[]; t: Dictionary; isAdmin: boolean };
 
@@ -49,7 +50,7 @@ export function MemberCards({ members, t, isAdmin }: Props) {
                   {m.projects
                     .filter((p) => p.status !== "completed")
                     .slice(0, 3)
-                    .map((p) => `${p.emoji} ${p.title}`)
+                    .map((p) => `${iconText(p.emoji)} ${p.title}`)
                     .join("　")}
                 </p>
               ) : null}
@@ -111,7 +112,7 @@ export function MembersTable({ members, t, isAdmin }: Props) {
               </td>
               <td className="max-w-56 truncate px-3 py-2 text-xs text-muted-foreground">{m.research_interests.join("・") || "—"}</td>
               <td className="max-w-56 truncate px-3 py-2 text-xs">
-                {m.projects.map((p) => `${p.emoji} ${p.title}`).join("、") || "—"}
+                {m.projects.map((p) => `${iconText(p.emoji)} ${p.title}`).join("、") || "—"}
               </td>
               <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">
                 {m.join_year ?? "—"}

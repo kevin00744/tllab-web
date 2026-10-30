@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
 import { statusLabel } from "@/lib/status";
 import type { FormOptions, Task } from "@/types/entities";
+import { iconText } from "@/lib/icon";
 
 const STATUSES = ["todo", "in_progress", "in_review", "done"] as const;
 const PRIORITIES = ["high", "medium", "low"] as const;
@@ -161,7 +162,7 @@ function TaskForm({
                   <option value="">{t.common.none}</option>
                   {options.projects.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.emoji} {p.title}
+                      {iconText(p.emoji)} {p.title}
                     </option>
                   ))}
                 </NativeSelect>

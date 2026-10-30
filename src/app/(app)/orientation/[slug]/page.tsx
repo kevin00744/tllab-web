@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
+import { ManageButton } from "@/components/admin/manage-button";
 import { DocDialog } from "@/components/orientation/doc-dialog";
 import { DocTree } from "@/components/orientation/doc-tree";
 import { DocumentDoc } from "@/components/orientation/document-doc";
@@ -14,6 +15,7 @@ import { getPageMeta } from "@/lib/pages";
 import { extractHeadings } from "@/lib/text";
 import { ancestorsOf, buildTree, flattenTree } from "@/lib/tree";
 import { cn } from "@/lib/utils";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata({ params }: PageProps<"/orientation/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -40,7 +42,7 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
       <nav aria-label={t.orientationPage.contents} className="min-w-0 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-5rem)] lg:overflow-y-auto">
         <div className="mb-2 flex items-center justify-between">
           <Link href="/orientation" className="text-sm font-semibold">
-            {meta.emoji} {meta.title}
+            <EntityIcon value={meta.emoji} /> {meta.title}
           </Link>
         </div>
         <details className="rounded-lg border px-2 py-1.5 lg:hidden">
@@ -52,11 +54,10 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
         <div className="hidden lg:block">
           <DocTree nodes={tree} current={doc.slug} />
         </div>
-        {doc.editable ? (
-          <div className="mt-3">
-            <DocDialog mode={{ kind: "new" }} documents={documents} />
-          </div>
-        ) : null}
+        <div className="mt-3 flex flex-wrap gap-2 empty:hidden">
+          {doc.editable ? <DocDialog mode={{ kind: "new" }} documents={documents} /> : null}
+          <ManageButton entity="document" />
+        </div>
       </nav>
 
       <article className="min-w-0">
@@ -65,7 +66,7 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
             {path.slice(0, -1).map((p) => (
               <li key={p.id} className="flex items-center gap-1">
                 <Link href={`/orientation/${p.slug}`} className="hover:text-foreground hover:underline">
-                  {p.emoji} {p.title}
+                  <EntityIcon value={p.emoji} /> {p.title}
                 </Link>
                 <ChevronRightIcon className="size-3" />
               </li>
@@ -75,7 +76,7 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="mb-2 text-4xl leading-none" aria-hidden>
-              {doc.emoji}
+              <EntityIcon value={doc.emoji} />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight">{doc.title}</h1>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -100,7 +101,7 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
                   <ChevronLeftIcon className="size-3.5" /> {t.orientationPage.prev}
                 </span>
                 <span className="mt-0.5 block truncate font-medium">
-                  {prev.emoji} {prev.title}
+                  <EntityIcon value={prev.emoji} /> {prev.title}
                 </span>
               </Link>
             ) : (
@@ -112,7 +113,7 @@ export default async function OrientationDocPage({ params }: PageProps<"/orienta
                   {t.orientationPage.next} <ChevronRightIcon className="size-3.5" />
                 </span>
                 <span className="mt-0.5 block truncate font-medium">
-                  {next.emoji} {next.title}
+                  <EntityIcon value={next.emoji} /> {next.title}
                 </span>
               </Link>
             ) : null}

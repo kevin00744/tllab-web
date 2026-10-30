@@ -3,6 +3,7 @@ import { BarChart3Icon, KanbanSquareIcon, TableIcon } from "lucide-react";
 
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { NewPublicationButton, OpenPublicationOnLoad, PublicationProvider } from "@/components/publications/publication-provider";
 import { PublicationStats } from "@/components/publications/publication-stats";
@@ -12,6 +13,7 @@ import { labDateOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
 import { statusLabel } from "@/lib/status";
+import { iconText } from "@/lib/icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -43,7 +45,12 @@ export default async function PublicationsPage({ searchParams }: PageProps<"/pub
   return (
     <PublicationProvider options={options}>
       <OpenPublicationOnLoad publication={publications.find((x) => x.id === str("pub")) ?? null} />
-      <PageHeader emoji={meta.emoji} title={meta.title} actions={<NewPublicationButton />} />
+      <PageHeader emoji={meta.emoji} title={meta.title} actions={
+          <>
+            <ManageButton entity="publication" />
+            <NewPublicationButton />
+          </>
+        } />
       <FilterBar>
         <ViewTabs
           current={view}
@@ -66,7 +73,7 @@ export default async function PublicationsPage({ searchParams }: PageProps<"/pub
             <FilterSelect
               param="project"
               label={`${t.fields.project}：${t.common.all}`}
-              options={options.projects.map((p) => ({ value: p.id, label: `${p.emoji} ${p.title}` }))}
+              options={options.projects.map((p) => ({ value: p.id, label: `${iconText(p.emoji)} ${p.title}` }))}
             />
             <FilterSelect
               param="member"

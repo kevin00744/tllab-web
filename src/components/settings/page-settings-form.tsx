@@ -8,6 +8,8 @@ import { savePageSetting, type PageSettingInput } from "@/app/(app)/settings/act
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n/client";
+import { iconText } from "@/lib/icon";
+import { IconPicker } from "@/components/common/icon-picker";
 
 /** 每一頁一列：emoji、中文名稱、英文名稱 */
 export function PageSettingRow({ setting, label }: { setting: PageSettingInput; label: string }) {
@@ -34,7 +36,7 @@ export function PageSettingRow({ setting, label }: { setting: PageSettingInput; 
       }}
     >
       <span className="col-span-2 text-xs text-muted-foreground sm:col-span-1">{label}</span>
-      <Input aria-label={`${label} ${t.fields.emoji}`} value={form.emoji} maxLength={8} onChange={(e) => set("emoji", e.target.value)} className="text-center" />
+      <IconPicker label={`${label} ${t.fields.emoji}`} value={form.emoji} fallback={iconText(setting.emoji) || "📄"} onChange={(v) => set("emoji", v)} />
       <Input aria-label={`${label} ${t.settingsPage.titleZh}`} value={form.title} onChange={(e) => set("title", e.target.value)} />
       <Input aria-label={`${label} ${t.settingsPage.titleEn}`} value={form.title_en} onChange={(e) => set("title_en", e.target.value)} className="col-start-2 sm:col-start-auto" />
       <Button type="submit" size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || pending} className="col-start-2 sm:col-start-auto">

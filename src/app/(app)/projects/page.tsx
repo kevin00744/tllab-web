@@ -3,6 +3,7 @@ import { GanttChartIcon, KanbanSquareIcon, TableIcon } from "lucide-react";
 
 import { FilterBar, FilterSelect, SearchBox } from "@/components/common/filters";
 import { ViewTabs } from "@/components/common/view-tabs";
+import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { ProjectDialog } from "@/components/projects/project-dialog";
 import { ProjectsBoard, ProjectsTable, ProjectsTimeline } from "@/components/projects/project-views";
@@ -37,7 +38,12 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/project
 
   return (
     <>
-      <PageHeader emoji={meta.emoji} title={meta.title} actions={<ProjectDialog project={null} options={options} />} />
+      <PageHeader emoji={meta.emoji} title={meta.title} actions={
+          <>
+            <ManageButton entity="project" />
+            <ProjectDialog project={null} options={options} />
+          </>
+        } />
       <FilterBar>
         <ViewTabs
           current={view}

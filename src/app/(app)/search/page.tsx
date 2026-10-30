@@ -10,6 +10,7 @@ import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { groupHits, hrefFor } from "@/lib/search";
 import { plainExcerpt } from "@/lib/text";
+import { EntityIcon } from "@/components/common/entity-icon";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -43,7 +44,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
                   const body = (
                     <>
                       <span className="w-5 shrink-0 text-center" aria-hidden>
-                        {h.emoji}
+                        <EntityIcon value={h.emoji} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">
