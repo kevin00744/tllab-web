@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import type { FormOptions } from "@/types/entities";
+import { nameMatches } from "@/lib/names";
 
 type Option = FormOptions["members"][number];
 
@@ -30,7 +31,7 @@ export function MemberPicker({
   const [query, setQuery] = useState("");
   const selected = members.filter((m) => value.includes(m.id));
   const filtered = useMemo(
-    () => members.filter((m) => m.name.toLowerCase().includes(query.trim().toLowerCase())),
+    () => members.filter((m) => nameMatches(m, query)),
     [members, query],
   );
 

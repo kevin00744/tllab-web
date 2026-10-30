@@ -25,6 +25,7 @@ import type {
   Task,
   YearStat,
 } from "@/types/entities";
+import { getUserId } from "@/lib/auth";
 
 // 讀取資料：一律呼叫資料庫函式（security invoker，權限由 RLS 決定）
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
@@ -64,10 +65,13 @@ export const listSoftware = (filter: Filter = {}) => rpc<SoftwareTool[]>("list_s
 export const getSoftware = (id: string) => rpc<SoftwareTool | null>("get_software", { p_id: id });
 export const listPipelines = (filter: Filter = {}) => rpc<Pipeline[]>("list_pipelines", { p_filter: clean(filter) });
 export const getPipeline = (id: string) => rpc<PipelineDetail | null>("get_pipeline", { p_id: id });
+export type MySettings = { hide_done_tasks?: boolean; hide_done_projects?: boolean };
+/** 自己的顯示偏好；訪客沒有設定 */
+export const getMySettings = cache(async (): Promise<MySettings> => ((await getUserId()) ? ((await rpc<MySettings>("get_my_settings")) ?? {}) : {}));
 export const listBoardThreads = (filter: Filter = {}) => rpc<BoardThread[]>("list_board", { p_filter: clean(filter) });
 /** 留言板的 @ 成員與 # 專案選項 */
 export const boardOptions = (options: FormOptions) => ({
-  members: options.members.map(({ id, name, avatar_url }) => ({ id, name, avatar_url })),
+  members: options.members.map(({ id, name, alt_name, avatar_url }) => ({ id, name, alt_name, avatar_url })),
   projects: options.projects.map((p) => ({ id: p.id, title: p.title, emoji: p.emoji ?? "📁" })),
 });
 export const listMeetings = (filter: Filter = {}) => rpc<Meeting[]>("list_meetings", { p_filter: clean(filter) });

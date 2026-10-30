@@ -12,11 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
 import { statusLabel } from "@/lib/status";
 import type { FormOptions, Task } from "@/types/entities";
 import { iconText } from "@/lib/icon";
+import { MarkdownField } from "@/components/common/markdown-field";
 
 const STATUSES = ["todo", "in_progress", "in_review", "done"] as const;
 const PRIORITIES = ["high", "medium", "low"] as const;
@@ -182,14 +182,13 @@ function TaskForm({
                 </NativeSelect>
               </Field>
             </div>
-            <Field label={t.fields.description} htmlFor="task-description">
-              <Textarea
-                id="task-description"
-                rows={4}
-                value={form.description}
-                onChange={(e) => set("description", e.target.value)}
-              />
-            </Field>
+            <MarkdownField
+              id="task-description"
+              label={t.fields.description}
+              value={form.description}
+              onChange={(v) => set("description", v)}
+              readOnly={readOnly}
+            />
             {task ? (
               <p className="text-xs text-muted-foreground">
                 {task.created_by ? `${t.fields.createdBy}：${task.created_by.name}` : null}

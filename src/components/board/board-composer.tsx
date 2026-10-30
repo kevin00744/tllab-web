@@ -18,7 +18,7 @@ export type BoardOptions = {
 };
 
 type Suggest = { kind: "@" | "#"; start: number; query: string; index: number };
-type Option = { kind: "@" | "#"; id: string; name: string; avatar_url?: string | null; emoji?: string };
+type Option = { kind: "@" | "#"; id: string; name: string; alt?: string | null; avatar_url?: string | null; emoji?: string };
 
 /** 游標前是「@關鍵字」或「#關鍵字」時開啟選單（行首或空白後） */
 function suggestAt(text: string, caret: number): Omit<Suggest, "index"> | null {
@@ -66,9 +66,9 @@ export function BoardComposer({
     const q = suggest.query.toLowerCase();
     const all: Option[] =
       suggest.kind === "@"
-        ? options.members.map((m) => ({ kind: "@", id: m.id, name: m.name, avatar_url: m.avatar_url }))
+        ? options.members.map((m) => ({ kind: "@", id: m.id, name: m.name, alt: m.alt_name, avatar_url: m.avatar_url }))
         : options.projects.map((p) => ({ kind: "#", id: p.id, name: p.title, emoji: p.emoji }));
-    return all.filter((o) => o.name.toLowerCase().includes(q)).slice(0, 8);
+    return all.filter((o) => o.name.toLowerCase().includes(q) || !!o.alt?.toLowerCase().includes(q)).slice(0, 8);
   }, [suggest, options]);
 
   const update = (value: string, caret: number) => {
@@ -173,6 +173,7 @@ export function BoardComposer({
                 <EntityIcon value={o.emoji} />
               )}
               <span className="truncate">{o.name}</span>
+              {o.alt ? <span className="truncate text-xs text-muted-foreground">{o.alt}</span> : null}
             </button>
           ))}
         </div>

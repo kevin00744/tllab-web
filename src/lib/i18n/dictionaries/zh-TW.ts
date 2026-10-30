@@ -255,6 +255,7 @@ const zhTW = {
     },
   },
   common: {
+    hideDone: "隱藏已完成",
     ok: "確定",
     write: "撰寫",
     preview: "預覽",

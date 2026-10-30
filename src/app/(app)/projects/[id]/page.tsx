@@ -17,12 +17,13 @@ import { NewTaskButton, TaskProvider } from "@/components/tasks/task-provider";
 import { TasksList } from "@/components/tasks/tasks-list";
 import { Badge } from "@/components/ui/badge";
 import { getUserId } from "@/lib/auth";
-import { boardOptions, getFormOptions, getProject, isUuid, listBoardThreads } from "@/lib/data";
+import { boardOptions, getFormOptions, getMySettings, getProject, isUuid, listBoardThreads } from "@/lib/data";
 import { formatDate, formatDateTime, labDateOf } from "@/lib/date";
 import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { projectStatusTone, statusLabel } from "@/lib/status";
 import { EntityIcon } from "@/components/common/entity-icon";
+import { Markdown } from "@/components/markdown";
 
 export async function generateMetadata({ params }: PageProps<"/projects/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -44,7 +45,8 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
   if (!isUuid(id)) notFound();
   const [{ locale, t }, options, project, signedIn] = await Promise.all([getI18n(), getFormOptions(), getProject(id), getUserId()]);
   if (!project) notFound();
-  const board = signedIn ? await listBoardThreads({ project_id: project.id, limit: 10 }) : [];
+  const [board, settings] = signedIn ? await Promise.all([listBoardThreads({ project_id: project.id, limit: 10 }), getMySettings()]) : [[], {}];
+  const tasks = settings.hide_done_tasks ? project.tasks.filter((x) => x.status !== "done") : project.tasks;
   const today = labDateOf(new Date().toISOString());
 
   return (
@@ -73,7 +75,7 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
       <div className="mb-8 grid items-start gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="min-w-0">
           {project.description ? (
-            <p className="mb-4 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{project.description}</p>
+            <Markdown className="mb-4 text-sm text-muted-foreground">{project.description}</Markdown>
           ) : null}
           <ProjectDoc
             projectId={project.id}
@@ -118,8 +120,8 @@ export default async function ProjectDetailPage({ params }: PageProps<"/projects
           </h2>
           <NewTaskButton size="sm" />
         </div>
-        {project.tasks.length ? (
-          <TasksList tasks={project.tasks} today={today} showProject={false} />
+        {tasks.length ? (
+          <TasksList tasks={tasks} today={today} showProject={false} />
         ) : (
           <EmptyBlock>{t.projectsPage.noTasks}</EmptyBlock>
         )}

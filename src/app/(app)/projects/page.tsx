@@ -7,11 +7,13 @@ import { ManageButton } from "@/components/admin/manage-button";
 import { PageHeader } from "@/components/page-header";
 import { ProjectDialog } from "@/components/projects/project-dialog";
 import { ProjectsBoard, ProjectsTable, ProjectsTimeline } from "@/components/projects/project-views";
-import { getFormOptions, isUuid, listProjects } from "@/lib/data";
+import { getFormOptions, getMySettings, isUuid, listProjects } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
 import { statusLabel } from "@/lib/status";
+import { HideDoneToggle } from "@/components/common/hide-done-toggle";
+import { getUserId } from "@/lib/auth";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -28,11 +30,16 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/project
   const status = STATUSES.find((s) => s === str("status"));
   const member = isUuid(str("member")) ? str("member") : undefined;
 
-  const [{ locale, t }, options, projects] = await Promise.all([
+  const [{ locale, t }, options, all, settings, signedIn] = await Promise.all([
     getI18n(),
     getFormOptions(),
     listProjects({ status, member_id: member, q: str("q") }),
+    getMySettings(),
+    getUserId(),
   ]);
+  // 隱藏已完成（個人設定）；明確篩選「完成」狀態時仍顯示
+  const hideDone = !!settings.hide_done_projects && status !== "completed";
+  const projects = hideDone ? all.filter((p) => p.status !== "completed") : all;
   const meta = await getPageMeta("projects", locale, t);
   const today = labDateOf(new Date().toISOString());
 
@@ -65,6 +72,7 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/project
           label={`${t.fields.members}：${t.common.all}`}
           options={options.members.filter((m) => !m.is_alumni).map((m) => ({ value: m.id, label: m.name }))}
         />
+        {signedIn ? <HideDoneToggle setting="hide_done_projects" value={!!settings.hide_done_projects} /> : null}
         <SearchBox placeholder={t.common.search} className="w-full sm:ml-auto sm:w-56" />
       </FilterBar>
       {view === "table" ? (

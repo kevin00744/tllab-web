@@ -20,6 +20,7 @@ import { format } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { isSystemAdmin, projectStatusTone, roleLabel, roleTone, statusLabel } from "@/lib/status";
 import { EntityIcon } from "@/components/common/entity-icon";
+import { primaryName, secondaryName } from "@/lib/names";
 
 export async function generateMetadata({ params }: PageProps<"/members/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -51,9 +52,9 @@ export default async function MemberDetailPage({ params }: PageProps<"/members/[
           <MemberAvatar member={member} className="size-20 text-2xl" />
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight">
-              {member.name}
-              {member.name_en && member.name_en !== member.name ? (
-                <span className="ml-2 text-base font-normal text-muted-foreground">{member.name_en}</span>
+              {primaryName(member)}
+              {secondaryName(member) ? (
+                <span className="ml-2 text-base font-normal text-muted-foreground">{secondaryName(member)}</span>
               ) : null}
             </h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm">

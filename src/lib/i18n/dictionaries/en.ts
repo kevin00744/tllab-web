@@ -257,6 +257,7 @@ const en: Dictionary = {
     },
   },
   common: {
+    hideDone: "Hide completed",
     ok: "OK",
     write: "Write",
     preview: "Preview",

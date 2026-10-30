@@ -1489,3 +1489,47 @@ begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+
+-- =============================================================================
+-- 成員名稱依介面語言顯示；個人顯示偏好
+-- =============================================================================
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000005';
+do $$
+declare v_t uuid := '50000000-0000-0000-0000-000000000003';
+begin
+  perform set_config('request.headers', '{"x-lab-locale":"en"}', true);
+  assert member_brief('10000000-0000-0000-0000-000000000005') ->> 'name' = 'Chia-Hao Chang', '英文介面顯示英文名稱';
+  assert member_brief('10000000-0000-0000-0000-000000000005') ->> 'alt_name' = '張家豪', '另一個語言的名稱';
+  assert exists (select 1 from jsonb_array_elements(form_options() -> 'members') x where x ->> 'name' = 'Chia-Hao Chang');
+  assert exists (select 1 from search_all('張家豪') where entity_type = 'member' and title = 'Chia-Hao Chang'), '中文也搜尋得到';
+  perform set_config('request.headers', '{"x-lab-locale":"zh-TW"}', true);
+  assert member_brief('10000000-0000-0000-0000-000000000005') ->> 'name' = '張家豪', '中文介面顯示中文名稱';
+  assert exists (select 1 from search_all('Chia-Hao') where entity_type = 'member' and title = '張家豪'), '英文也搜尋得到';
+  -- 沒有英文名稱：英文介面顯示中文
+  update members set name_en = null where id = '10000000-0000-0000-0000-000000000005';
+  perform set_config('request.headers', '{"x-lab-locale":"en"}', true);
+  assert member_brief('10000000-0000-0000-0000-000000000005') ->> 'name' = '張家豪' and member_brief('10000000-0000-0000-0000-000000000005') ->> 'alt_name' is null;
+  update members set name_en = 'Chia-Hao Chang' where id = '10000000-0000-0000-0000-000000000005';
+  perform set_config('request.headers', '', true);
+  assert member_brief('10000000-0000-0000-0000-000000000005') ->> 'name' = '張家豪', '預設中文';
+  -- 個人設定
+  assert get_my_settings() = '{}'::jsonb;
+  assert save_my_settings('{"hide_done_tasks":true,"nope":true,"hide_done_projects":"x"}') = '{"hide_done_tasks":true}'::jsonb;
+  assert save_my_settings('{"hide_done_projects":true}') = '{"hide_done_tasks":true,"hide_done_projects":true}'::jsonb, '只更新傳入的鍵';
+  assert (get_dashboard(14) -> 'prefs') is not null, '不影響 Dashboard 設定';
+end $$;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+do $$
+begin
+  assert get_my_settings() = '{}'::jsonb, '每個人各自的設定';
+end $$;
+reset role;
+reset request.jwt.claim.sub;
+set role anon;
+do $$
+begin
+  begin perform save_my_settings('{"hide_done_tasks":true}'); raise exception 'x';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;

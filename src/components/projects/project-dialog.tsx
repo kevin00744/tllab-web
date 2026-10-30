@@ -21,11 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
 import { statusLabel } from "@/lib/status";
 import type { FormOptions, Project } from "@/types/entities";
 import { IconPicker } from "@/components/common/icon-picker";
+import { MarkdownField } from "@/components/common/markdown-field";
 
 const STATUSES = ["planning", "active", "paused", "completed"] as const;
 
@@ -188,14 +188,12 @@ function ProjectForm({
             <Field label={t.fields.tags} htmlFor="project-tags" hint={t.fields.tagsHint}>
               <Input id="project-tags" value={tagText} onChange={(e) => setTagText(e.target.value)} />
             </Field>
-            <Field label={t.fields.description} htmlFor="project-description">
-              <Textarea
-                id="project-description"
-                rows={5}
-                value={form.description}
-                onChange={(e) => set("description", e.target.value)}
-              />
-            </Field>
+            <MarkdownField
+              id="project-description"
+              label={t.fields.description}
+              value={form.description}
+              onChange={(v) => set("description", v)}
+            />
           </fieldset>
         </DialogBody>
         <DialogFooter>

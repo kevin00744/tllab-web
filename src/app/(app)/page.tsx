@@ -19,6 +19,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { getPageMetas } from "@/lib/pages";
 import { createClient } from "@/lib/supabase/server";
 import type { DashboardData } from "@/types/dashboard";
+import { primaryName } from "@/lib/names";
 
 // 訪客看不到個人化與會議／行事曆區塊
 const GUEST_HIDDEN_SECTIONS: SectionKey[] = ["board", "my_tasks", "meetings", "calendar"];
@@ -129,7 +130,7 @@ export default async function DashboardPage() {
     <>
       <PageHeader
         emoji={metas.get("dashboard")!.emoji}
-        title={member ? format(t.dashboard.welcome, { name: member.name }) : t.guest.welcome}
+        title={member ? format(t.dashboard.welcome, { name: primaryName(member, locale) }) : t.guest.welcome}
         description={
           <>
             {dashboard ? (

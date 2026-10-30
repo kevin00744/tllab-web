@@ -30,7 +30,10 @@ function useAgo() {
   };
 }
 
-function Body({ body }: { body: string }) {
+/** 標註顯示目前的名稱（依介面語言）；成員或專案不在選項中時用留言當時的名稱 */
+function Body({ body, options }: { body: string; options: BoardOptions }) {
+  const current = (type: "member" | "project", id: string) =>
+    type === "member" ? options.members.find((m) => m.id === id)?.name : options.projects.find((p) => p.id === id)?.title;
   return (
     <p className="text-sm break-words whitespace-pre-wrap">
       {parseBody(body).map((s, i) =>
@@ -46,7 +49,7 @@ function Body({ body }: { body: string }) {
             )}
           >
             {s.type === "member" ? "@" : "#"}
-            {s.name}
+            {current(s.type, s.id) ?? s.name}
           </Link>
         ),
       )}
@@ -113,7 +116,7 @@ function Post({
           </div>
         ) : (
           <div className="mt-0.5">
-            <Body body={post.body} />
+            <Body body={post.body} options={options} />
           </div>
         )}
         {confirm ? (

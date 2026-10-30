@@ -24,6 +24,7 @@
 | `20261029000019_activity_admin_only.sql` | 活動紀錄只有 Admin 可讀：`activity_log_select` 改為 `is_admin()`，移除 anon 的讀取與 `list_activity` 執行權限（階段 10） |
 | `20261029000020_admin_manage.sql` | 管理員快速管理 `admin_manage`（批量刪除、重新命名、移動、更換圖示）；圖示欄位 `icon_ok()` 檢查（emoji 或 icons bucket 網址）；公開的 `icons` Storage bucket（階段 11） |
 | `20261029000021_message_board.sql` | 留言板 `board_posts`／`board_post_mentions`／`board_post_projects`、`list_board`、`save_board_post`、`delete_board_post`；Dashboard 設定加入 `board` 區塊（階段 12） |
+| `20261029000022_localized_names_settings.sql` | 成員名稱依介面語言顯示：`request_locale()`（讀取請求標頭 `x-lab-locale`）、`display_name()`、`alt_name()`，更新 `member_brief`、`form_options`、專案／任務／會議／行事曆／Dashboard／搜尋的成員名稱；`member_preferences.settings` 與 `get_my_settings`／`save_my_settings`（隱藏已完成）（階段 13） |
 | `20261029000012_system_admin_ui.sql` | `is_system_admin` 只在 `app_role = 'admin'` 且非校友時有效；系統管理員可用 `save_member()` 指定／取消其他 Admin |
 | `../seed.sql` | 示範資料（日期皆相對今天） |
 
@@ -187,6 +188,8 @@ Admin 以 `create_invite_code()` 產生邀請碼（格式 `TL-XXXX-XXXX-XXXX-XXX
 | `save_dashboard_prefs(p)` | 儲存自己的 Dashboard 設定（只保留已知的區塊與設定值） |
 | `import_notion(p)` / `resolve_notion(id)` | Notion 匯入與內部連結導向（見下方「Notion 匯入」） |
 | `list_page_settings()` / `save_page_setting(key, emoji, title, title_en)` | 側邊欄頁面名稱與圖示（修改限 Admin） |
+| `display_name(name, name_en)` / `alt_name(name, name_en)` | 依 `request_locale()`（網頁伺服器在每個請求帶 `x-lab-locale`）回傳顯示名稱與另一個語言的名稱；中文介面優先 `name`、英文介面優先 `name_en`，空白時用另一個 |
+| `get_my_settings()` / `save_my_settings(p)` | 自己的顯示偏好（`hide_done_tasks`、`hide_done_projects`）；只保留已知的鍵、只更新傳入的鍵 |
 | `list_board(filter)` / `save_board_post(p)` / `delete_board_post(id)` | 留言板：討論串（主留言新到舊，含回覆）；`filter.project_id`、`filter.mine`（提及我或我參與）、`filter.before`、`filter.limit`；新增／修改時同步提及與專案標註；刪除限發文者或 Admin |
 | `admin_manage(p)` | Admin 快速管理：`entity`（project／task／publication／document／faq／software／pipeline／meeting）、`action`（delete／rename／move／icon）、`ids`、`value`；move 的 value 依類型為狀態、階段、會議類型、專案 id、上層頁面 id 或分類；同一交易，回傳處理筆數 |
 | `icon_ok(text)` | 圖示欄位檢查：16 字以內、不含空白與 HTML 字元的 emoji，或 `…/storage/v1/object/public/icons/…` 網址 |

@@ -9,6 +9,7 @@ import { format } from "@/lib/i18n";
 import { roleLabel, roleTone } from "@/lib/status";
 import type { MemberProfile } from "@/types/entities";
 import { iconText } from "@/lib/icon";
+import { primaryName, secondaryName } from "@/lib/names";
 
 type Props = { members: MemberProfile[]; t: Dictionary; isAdmin: boolean };
 
@@ -35,8 +36,8 @@ export function MemberCards({ members, t, isAdmin }: Props) {
             <MemberAvatar member={m} className="size-14 text-lg" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-semibold">{m.name}</span>
-                {m.name_en && m.name_en !== m.name ? <span className="text-xs text-muted-foreground">{m.name_en}</span> : null}
+                <span className="font-semibold">{primaryName(m)}</span>
+                {secondaryName(m) ? <span className="text-xs text-muted-foreground">{secondaryName(m)}</span> : null}
               </div>
               <div className="mt-1 flex flex-wrap gap-1">
                 <PositionBadge m={m} t={t} />
@@ -92,8 +93,8 @@ export function MembersTable({ members, t, isAdmin }: Props) {
                 <Link href={`/members/${m.id}`} className="flex items-center gap-2 font-medium hover:underline">
                   <MemberAvatar member={m} className="size-7" />
                   <span>
-                    {m.name}
-                    {m.name_en && m.name_en !== m.name ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">{m.name_en}</span> : null}
+                    {primaryName(m)}
+                    {secondaryName(m) ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">{secondaryName(m)}</span> : null}
                   </span>
                 </Link>
               </td>

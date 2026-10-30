@@ -9,11 +9,13 @@ import { NewTaskButton, OpenTaskOnLoad, TaskProvider } from "@/components/tasks/
 import { TasksBoard } from "@/components/tasks/tasks-board";
 import { TasksCalendar } from "@/components/tasks/tasks-calendar";
 import { TasksList } from "@/components/tasks/tasks-list";
-import { getFormOptions, isUuid, listTasks } from "@/lib/data";
+import { getFormOptions, getMySettings, isUuid, listTasks } from "@/lib/data";
 import { labDateOf } from "@/lib/date";
 import { getI18n } from "@/lib/i18n/server";
 import { getPageMeta } from "@/lib/pages";
 import { iconText } from "@/lib/icon";
+import { HideDoneToggle } from "@/components/common/hide-done-toggle";
+import { getUserId } from "@/lib/auth";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -33,7 +35,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   const today = labDateOf(new Date().toISOString());
   const month = /^\d{4}-\d{2}$/.test(str("month") ?? "") ? str("month")! : today.slice(0, 7);
 
-  const [{ locale, t }, options, tasks] = await Promise.all([
+  const [{ locale, t }, options, all, settings, signedIn] = await Promise.all([
     getI18n(),
     getFormOptions(),
     listTasks({
@@ -43,7 +45,11 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
       member_id: member,
       q: str("q"),
     }),
+    getMySettings(),
+    getUserId(),
   ]);
+  // 隱藏已完成（個人設定）
+  const tasks = settings.hide_done_tasks ? all.filter((x) => x.status !== "done") : all;
   const meta = await getPageMeta("tasks", locale, t);
 
   return (
@@ -84,6 +90,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
           label={t.tasksPage.anyMember}
           options={options.members.filter((m) => !m.is_alumni).map((m) => ({ value: m.id, label: m.name }))}
         />
+        {signedIn ? <HideDoneToggle setting="hide_done_tasks" value={!!settings.hide_done_tasks} /> : null}
         <SearchBox placeholder={t.common.search} className="w-full sm:ml-auto sm:w-56" />
       </FilterBar>
 

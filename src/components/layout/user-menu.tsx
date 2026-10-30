@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { primaryName } from "@/lib/names";
 
 export function MemberAvatar({ member, className }: { member: Pick<Member, "name" | "avatar_url">; className?: string }) {
   return (
@@ -30,21 +31,21 @@ export function MemberAvatar({ member, className }: { member: Pick<Member, "name
 }
 
 export function UserMenu({ member }: { member: Member }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring">
         <MemberAvatar member={member} className="size-7" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{member.name}</span>
+          <span className="block truncate font-medium">{primaryName(member, locale)}</span>
           <span className="block truncate text-xs text-muted-foreground">{roleLabel(t, member)}</span>
         </span>
         <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-60">
         <DropdownMenuLabel className="font-normal">
-          <div className="truncate font-medium">{member.name}</div>
+          <div className="truncate font-medium">{primaryName(member, locale)}</div>
           <div className="truncate text-xs text-muted-foreground">{member.email}</div>
           <Badge tone={roleTone[member.app_role]} className="mt-1.5">
             {roleLabel(t, member)}

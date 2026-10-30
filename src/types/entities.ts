@@ -5,7 +5,7 @@ import type { MeetingType } from "./dashboard";
 // 對應 supabase/migrations/20261029000008_projects_tasks_publications_api.sql 的 JSON 結構
 
 export type PublicationType = "journal" | "conference" | "preprint" | "thesis";
-export type MemberBrief = { id: string; name: string; avatar_url: string | null };
+export type MemberBrief = { id: string; name: string; avatar_url: string | null; alt_name?: string | null };
 export type Ref = { id: string; title: string; emoji?: string };
 
 export type Project = {
@@ -124,6 +124,8 @@ export type MemberProfile = {
   id: string;
   name: string;
   name_en: string | null;
+  /** 依介面語言的顯示名稱（migration 22） */
+  display_name?: string;
   email: string | null;
   avatar_url: string | null;
   position: MemberPosition;
